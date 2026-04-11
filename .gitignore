@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+data/raw/
+data/processed/
+models/churn/*.h5
+models/churn/*.pkl

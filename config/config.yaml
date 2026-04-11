@@ -1,0 +1,63 @@
+
+# ─────────────────────────────────────────────────────────────────────────────
+# config.yaml
+# Business Insights & Sales Forecasting Tool — Master Configuration
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Paths ────────────────────────────────────────────────────────────────────
+paths:
+  raw_online_retail: data/raw/online_retail/online_retail.xlsx
+  processed_online_retail: data/processed/online_retail_cleaned.csv
+  churn_features: data/processed/churn_features.csv
+  model_dir: models/churn/
+  eval_dir: evaluation/churn/
+  reports_figures: reports/figures/
+  reports_tables: reports/tables/
+
+# ── Churn Feature Engineering ─────────────────────────────────────────────────
+features:
+  snapshot_date: "2011-12-10"    # last date in Online Retail data
+  churn_window_days: 30          # days of inactivity = churn
+  rfm_bins: 5                    # number of bins for RFM quantile scoring
+
+# ── Model Architecture ────────────────────────────────────────────────────────
+model:
+  type: neural_network           # options: neural_network, random_forest, logistic_regression
+  layers: [128, 64, 32]          # hidden layer sizes
+  dropout: 0.3
+  activation: relu
+  output_activation: sigmoid
+  loss: binary_crossentropy
+  optimizer: adam
+
+# ── Hyperparameter Tuning Grid ───────────────────────────────────────────────
+hp_grid:
+  learning_rate: [0.001, 0.0005, 0.0001]
+  batch_size: [32, 64, 128]
+  dropout: [0.2, 0.3, 0.5]
+  epochs: [30, 50]
+  layers:
+    - [64, 32]
+    - [128, 64, 32]
+    - [256, 128, 64]
+
+# ── Final Tuned Hyperparameters (after grid search) ──────────────────────────
+final_hp:
+  learning_rate: 0.001
+  batch_size: 64
+  dropout: 0.3
+  epochs: 50
+  layers: [128, 64, 32]
+
+# ── Validation Strategy ───────────────────────────────────────────────────────
+validation:
+  strategy: stratified_split     # options: stratified_split, kfold
+  test_size: 0.15
+  val_size: 0.15
+  n_folds: 5                     # used only if strategy == kfold
+  random_state: 42
+
+# ── Class Imbalance ───────────────────────────────────────────────────────────
+imbalance:
+  use_smote: true
+  random_state: 42
