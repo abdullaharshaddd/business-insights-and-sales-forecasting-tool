@@ -1,0 +1,5 @@
+segment,n_samples,churn_rate,precision,recall,f1,auc_roc
+Champions,125,0.384,0.0,0.0,0.0,0.6583
+High-Value,138,0.529,1.0,0.0137,0.027,0.6561
+Low-Value,172,0.872,0.8742,0.88,0.8771,0.5594
+Mid-Value,178,0.764,0.8,0.1471,0.2484,0.5523
