@@ -14,6 +14,7 @@ paths:
   reports_figures: reports/figures/
   reports_tables: reports/tables/
   daily_revenue: data/processed/daily_revenue.csv
+  olist_db: data/processed/olist/olist.db
   prophet_model: models/forecasting/prophet_model.pkl
   forecasting_eval: evaluation/forecasting/
 

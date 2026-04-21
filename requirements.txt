@@ -24,7 +24,15 @@ prophet>=1.1
 holidays>=0.25
 torch>=2.0
 
-# ── NL2SQL Chatbot (future phases) ───────────────────────
-# langchain>=0.1
-# langchain-community>=0.0.20
-# sqlalchemy>=2.0
+
+
+# ── Strategic Consultant Setup ───────────────────────────
+transformers>=4.40.0
+torch>=2.2.0
+accelerate>=0.29.0
+bitsandbytes>=0.43.0
+langchain-huggingface
+langchain-community
+langchain>=0.1
+sqlalchemy>=2.0
+python-dotenv>=1.0
