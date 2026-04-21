@@ -97,7 +97,7 @@ def build_churn_model(
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble    import RandomForestClassifier, GradientBoostingClassifier
-
+from sklearn.neighbors import KNeighborsClassifier
 
 def get_baseline_models():
     """
@@ -114,6 +114,7 @@ def get_baseline_models():
         "Gradient Boosting": GradientBoostingClassifier(
             n_estimators=200, learning_rate=0.05, max_depth=5, random_state=42
         ),
+        "K-Nearest Neighbors": KNeighborsClassifier(n_neighbors=5),
     }
 
 
