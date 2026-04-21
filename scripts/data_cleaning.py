@@ -98,6 +98,7 @@ def clean_olist(olist_dir: str) -> pd.DataFrame:
     df = df.merge(dfs["customers"],               on="customer_id", how="left")
     df = df.merge(dfs["products"],                on="product_id",  how="left")
     df = df.merge(dfs["sellers"],                 on="seller_id",   how="left")
+    df = df.merge(dfs["reviews"],                 on="order_id",    how="left")
     df = df.merge(
         dfs["translation"],
         on="product_category_name",
