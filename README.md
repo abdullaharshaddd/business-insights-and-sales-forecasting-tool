@@ -20,6 +20,19 @@ An AI-driven decision intelligence system for predictive analytics, customer seg
 
 ---
 
+## Project Status & Roadmap
+
+| Phase | Description | Status |
+|---|---|---|
+| **1. Data Cleaning** | Preprocessing Online Retail & Olist CSVs | ✅ Completed |
+| **2. Churn Prediction**| DNN + Baseline Models (LR, RF, KNN) | ✅ Completed |
+| **3. Forecasting (A)** | Sales forecasting with Prophet + Holidays | ✅ Completed |
+| **4. Intelligent Chat**| NL2SQL Agent with LangChain | 🚧 In Progress |
+| **5. Forecasting (B)** | Deep Learning forecasting with LSTM | ⏳ Pending |
+| **6. Segmentation**   | Customer categorization (RFM + K-Means) | ⏳ Pending |
+
+---
+
 ## Project Structure
 
 ```
