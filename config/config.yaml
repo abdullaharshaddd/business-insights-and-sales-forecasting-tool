@@ -13,6 +13,9 @@ paths:
   eval_dir: evaluation/churn/
   reports_figures: reports/figures/
   reports_tables: reports/tables/
+  daily_revenue: data/processed/daily_revenue.csv
+  prophet_model: models/forecasting/prophet_model.pkl
+  forecasting_eval: evaluation/forecasting/
 
 # ── Churn Feature Engineering ─────────────────────────────────────────────────
 features:
@@ -61,3 +64,21 @@ validation:
 imbalance:
   use_smote: true
   random_state: 42
+# ── Forecasting (Prophet) ─────────────────────────────────────────────────────
+forecasting:
+  prophet:
+    growth: linear
+    yearly_seasonality: auto
+    weekly_seasonality: auto
+    daily_seasonality: false
+    seasonality_mode: additive
+    changepoint_prior_scale: 0.05
+    holidays_prior_scale: 10.0
+    interval_width: 0.95
+  
+  training:
+    test_size_days: 30
+    forecast_horizon: 30
+    cv_initial: '180 days'
+    cv_period: '30 days'
+    cv_horizon: '30 days'
