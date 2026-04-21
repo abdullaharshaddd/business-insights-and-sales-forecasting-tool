@@ -160,10 +160,7 @@ data/processed/
 !data/processed/.gitkeep
 
 # Models - Keep large model weights out of version control
-models/churn/*.h5
-models/churn/*.pkl
-models/churn/*.npy
-models/churn/*.json
+
 
 # LaTeX specific
 *.aux
