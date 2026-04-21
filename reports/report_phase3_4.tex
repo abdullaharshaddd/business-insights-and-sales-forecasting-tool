@@ -261,6 +261,7 @@ A \textbf{stratified 70/15/15 Train-Validation-Test split} was applied to preser
 \midrule
 Train    & Model fitting       & 70\% & SMOTE applied post-split \\
 Validate & HP tuning \& Early Stopping & 15\% & Original distribution \\
+git log --pret
 Test     & Final evaluation    & 15\% & Held-out, untouched \\
 \bottomrule
 \end{tabular}
@@ -305,10 +306,9 @@ Given the class imbalance ($66\%$ Churned), \textbf{raw accuracy is a misleading
 \toprule
 \textbf{Model} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} & \textbf{AUC-ROC} \\
 \midrule
-Logistic Regression    & 0.6998 & 0.8118 & 0.7118 & 0.7585 & 0.7410 \\
-Random Forest          & 0.6966 & 0.7835 & 0.7488 & 0.7657 & 0.7192 \\
-Gradient Boosting      & 0.6917 & 0.7614 & 0.7783 & 0.7698 & 0.7189 \\
-K-Nearest Neighbors    & 0.6281 & 0.7618 & 0.6379 & 0.6944 & 0.6722 \\
+Logistic Regression    & 0.7276 & 0.8125 & 0.7666 & 0.7889 & 0.7607 \\
+Random Forest          & 0.6982 & 0.7734 & 0.7715 & 0.7724 & 0.7204 \\
+Gradient Boosting      & 0.6998 & 0.7661 & 0.7887 & 0.7772 & 0.7042 \\
 \textbf{DNN (ChurnNet)}& 0.5465 & \textbf{0.8644} & 0.3759 & 0.5240 & 0.7514 \\
 \bottomrule
 \end{tabular}
