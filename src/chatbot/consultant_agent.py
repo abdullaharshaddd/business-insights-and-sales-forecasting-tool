@@ -26,7 +26,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 
 # 2. Setup the Reasoning Pipeline
-pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=1024, device=device)
+pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, max_new_tokens=1024, max_length = None, device=device)
 
 def consult_logic(user_input):
     """A manual Reasoning loop for the Strategic Consultant"""
