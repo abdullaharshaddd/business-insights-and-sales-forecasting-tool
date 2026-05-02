@@ -156,6 +156,25 @@ def build_documents() -> list[dict]:
         },
     ]
     docs.extend(rules)
+
+    # ── Business Strategy Knowledge (Real RAG Documents) ──────────────────────
+    bk_path = "config/business_knowledge.json"
+    if os.path.exists(bk_path):
+        with open(bk_path) as f:
+            knowledge = json.load(f)
+
+        for key, doc in knowledge.items():
+            title = doc.get("title", key)
+            doc_type = doc.get("type", "document")
+            content = doc.get("content", "")
+
+            text = f"{title}\n\n{content}"
+            docs.append({
+                "id": f"knowledge_{key}",
+                "text": text,
+                "meta": {"type": doc_type, "key": key},
+            })
+
     return docs
 
 

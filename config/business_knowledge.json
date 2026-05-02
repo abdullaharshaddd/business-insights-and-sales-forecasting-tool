@@ -1,0 +1,43 @@
+{
+  "retention_playbook": {
+    "type": "strategy",
+    "title": "Customer Retention Playbook",
+    "content": "Customer Retention Strategy for E-Commerce:\n\n1. LOYALTY PROGRAM: Implement tiered rewards (Bronze/Silver/Gold) based on RFM segments. Champions get exclusive early access. High-Value customers get bonus points.\n\n2. WIN-BACK CAMPAIGNS: Target customers with recency > 60 days. Offer 10-15% discount on their preferred categories. Use email + push notifications.\n\n3. POST-PURCHASE ENGAGEMENT: Send order tracking updates. Follow up 7 days after delivery for review. Recommend complementary products within 14 days.\n\n4. CHURN PREVENTION TRIGGERS: Monitor customers whose purchase frequency drops below their historical average. Trigger automated retention offers when churn probability exceeds 60%.\n\n5. REPEAT PURCHASE OPTIMIZATION: Offer subscription/auto-reorder for consumable categories. Bundle discounts for 2nd purchase within 30 days."
+  },
+
+  "revenue_optimization": {
+    "type": "strategy",
+    "title": "Revenue Optimization Playbook",
+    "content": "Revenue Growth Strategy:\n\n1. AVERAGE ORDER VALUE (AOV): Implement 'frequently bought together' recommendations. Offer free shipping threshold above current AOV to encourage larger baskets. Cross-sell complementary categories.\n\n2. CATEGORY EXPANSION: Identify high-review, low-revenue categories for promotion. Sunset consistently low-performing categories with poor reviews.\n\n3. GEOGRAPHIC EXPANSION: Focus marketing spend on high-converting states (SP, RJ, MG). Develop logistics partnerships in underserved regions to reduce delivery time.\n\n4. PRICING STRATEGY: Analyze freight-to-price ratio. Categories where freight exceeds 20% of price need logistics optimization or seller incentives.\n\n5. SEASONAL PLANNING: Identify peak months from historical trends. Pre-position inventory and marketing budget 30 days before seasonal peaks."
+  },
+
+  "delivery_improvement": {
+    "type": "sop",
+    "title": "Delivery Performance SOP",
+    "content": "Delivery Performance Improvement Plan:\n\n1. SELLER SLA: Establish maximum 2-day handling time SLA. Flag sellers exceeding 3-day handling for review. Remove chronic late shippers.\n\n2. CARRIER OPTIMIZATION: Track on-time delivery by carrier. Shift volume from carriers with <90% on-time rate. Negotiate SLAs with performance penalties.\n\n3. REGIONAL LOGISTICS: Deploy regional fulfillment for top 3 states (SP, RJ, MG). Partner with local carriers for rural deliveries. Reduce estimated delivery buffers for nearby regions.\n\n4. CUSTOMER COMMUNICATION: Send proactive delay notifications before estimated delivery date. Offer compensation for delays > 7 days past estimate.\n\n5. MONITORING: Track daily on-time delivery rate. Alert operations team when rate drops below 95%. Monthly seller performance reviews."
+  },
+
+  "churn_strategy": {
+    "type": "strategy",
+    "title": "Churn Reduction Strategy",
+    "content": "Churn Reduction Framework:\n\n1. SEGMENT-SPECIFIC ACTIONS:\n   - Champions (38.4% churn): Personalized VIP treatment, dedicated support, early access to new products\n   - High-Value (52.9% churn): Re-engagement campaigns, loyalty rewards, satisfaction surveys\n   - Mid-Value (76.4% churn): Category-based promotions, price-sensitive offers, bundle deals\n   - Low-Value (87.2% churn): Cost-effective email campaigns, flash sales, marketplace recommendations\n\n2. EARLY WARNING SYSTEM: Use DNN churn predictor to identify at-risk customers. Trigger interventions when probability > 0.5.\n\n3. ROOT CAUSE ANALYSIS: Low-Value churn is primarily driven by poor delivery experience and lack of repeat purchase incentive. Focus on reducing delivery delays for first-time buyers.\n\n4. MEASUREMENT: Track 30-day, 60-day, and 90-day retention rates by segment. Target: reduce overall churn by 15% in 6 months."
+  },
+
+  "marketplace_health": {
+    "type": "report",
+    "title": "Marketplace Health Indicators",
+    "content": "Key Marketplace Health Metrics:\n\n1. SELLER CONCENTRATION: Top 10 sellers should not exceed 30% of total revenue. High concentration increases platform risk.\n\n2. CATEGORY HEALTH: Monitor review scores by category. Categories with avg review < 3.5 need quality intervention. Categories with declining revenue need promotion or seller recruitment.\n\n3. GEOGRAPHIC BALANCE: SP dominates (~40% of orders). Growth opportunity in Northeast and Central-West regions with targeted seller recruitment.\n\n4. PAYMENT HEALTH: Credit card dominance (76%+). High installment usage indicates price sensitivity. Boleto (bank slip) users have higher cancellation rates.\n\n5. REVIEW QUALITY: Overall avg should remain > 4.0. Monitor 1-star review spikes weekly. Correlate low reviews with delivery delays."
+  },
+
+  "forecasting_interpretation": {
+    "type": "guide",
+    "title": "How to Interpret Sales Forecasts",
+    "content": "Forecast Interpretation Guide:\n\n1. TREND: The Prophet model captures linear growth trends and seasonal patterns. A 'DECREASING' trend means the model's fitted trend component is declining, which could be driven by:\n   - Seasonal effects (post-holiday dip)\n   - Genuine market slowdown\n   - Dataset boundary effects (model trained on historical data that may end during a decline)\n\n2. CONFIDENCE INTERVAL: The 95% CI shows the range of plausible outcomes. Wide intervals = high uncertainty. Narrow intervals = high confidence.\n\n3. MAPE: The model has ~36% MAPE, meaning daily predictions can vary by about 36% from actuals. This is typical for daily revenue forecasting.\n\n4. ACTIONABLE USE: Use forecasts for capacity planning and inventory, NOT for exact financial projections. Always use the lower bound (yhat_lower) for conservative budgeting.\n\n5. LIMITATIONS: The model does not account for marketing campaigns, competitor actions, or external economic events. These must be factored in manually by business stakeholders."
+  },
+
+  "data_quality_notes": {
+    "type": "documentation",
+    "title": "Olist Dataset Documentation",
+    "content": "Olist E-Commerce Dataset Notes:\n\n1. COVERAGE: Brazilian e-commerce marketplace data from 2016-2018. Contains ~100K orders across multiple sellers and categories.\n\n2. KEY TABLES: orders (order lifecycle), order_items (product-level details), customers (unique by customer_unique_id), sellers, products, order_reviews, order_payments, geolocation.\n\n3. REVENUE FORMULA: Always use SUM(price + freight_value) from order_items. Filter on order_status = 'delivered' for financial metrics.\n\n4. CUSTOMER IDENTITY: customer_id is per-order. Use customer_unique_id for unique customer counting and repeat purchase analysis.\n\n5. CATEGORIES: Product categories are in Portuguese. Always join product_category_name_translation for English names.\n\n6. LIMITATIONS: Dataset ends in 2018. Churn definition uses 30-day inactivity window from snapshot date. Geographic data is at zip code prefix level."
+  }
+}
