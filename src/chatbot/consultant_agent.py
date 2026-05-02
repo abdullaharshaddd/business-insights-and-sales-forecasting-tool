@@ -12,7 +12,7 @@ from groq import Groq
 from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.memory import MemorySaver
 
 from src.chatbot.business_toolkit import (
     get_model_registry,
@@ -22,6 +22,7 @@ from src.chatbot.business_toolkit import (
     get_churn_risk_by_segment,
     get_churn_error_analysis,
     search_business_knowledge,
+    execute_deterministic_kpi,
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ db = SQLDatabase.from_uri(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. SQL Validation Middleware
+# 3. Deterministic Tools & Rules
 # ─────────────────────────────────────────────────────────────────────────────
 _SQL_RULES = [
     {
@@ -86,14 +87,22 @@ _SQL_RULES = [
     },
 ]
 
+SYSTEM_PROMPT = """You are an enterprise business intelligence assistant.
+
+DETERMINISTIC KPI LAYER:
+- Use execute_deterministic_kpi for ALL core business metrics (Revenue, AOV, etc.).
+- NEVER write SQL for these. This ensures consistency with executive dashboards.
+
+EXPLORATORY SQL LAYER:
+- Use safe_sql_query for ad-hoc questions not in the KPI registry.
+- ALWAYS use tool_search_business_knowledge first to check for related rules.
+"""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. Deterministic Graph State
 # ─────────────────────────────────────────────────────────────────────────────
 class AgentState(TypedDict):
-    # LangGraph standard message appending
     messages: Annotated[list, operator.add]
-    
-    # Custom deterministic state tracking
     user_input: str
     intent: str
     raw_data: str
@@ -108,12 +117,12 @@ class AgentState(TypedDict):
 async def router_node(state: AgentState):
     """Strictly classifies the user query into predefined paths."""
     user_input = state["user_input"]
-    prompt = f"""Classify the intent of the following user query into EXACTLY ONE of these categories:
-- FORECAST (asking about future sales, revenue predictions)
-- CHURN (asking about customer retention, risk, or segment performance)
-- KPI (asking for the definition or formula of a metric)
-- SQL (asking for live data, counts, or sums requiring a database query)
-- OTHER (greetings, completely irrelevant topics)
+    prompt = f"""Classify intent into EXACTLY ONE:
+- FORECAST (future sales predictions)
+- CHURN (customer retention risk)
+- KPI (A specific metric like revenue, AOV, or delivery rate)
+- SQL (Custom ad-hoc data query)
+- OTHER (greetings, off-topic)
 
 Query: "{user_input}"
 Respond with ONLY the category name."""
@@ -129,153 +138,122 @@ Respond with ONLY the category name."""
     except Exception:
         intent = "SQL"
 
-    valid_intents = ["FORECAST", "CHURN", "KPI", "SQL", "OTHER"]
-    if intent not in valid_intents:
-        intent = "SQL" # Default fallback
+    if intent not in ["FORECAST", "CHURN", "KPI", "SQL", "OTHER"]:
+        intent = "SQL"
         
-    print(f"\n[Router] Intent classified as: {intent}")
+    print(f"\n[Router] Intent: {intent}")
     return {"intent": intent}
 
 
 async def forecast_node(state: AgentState):
-    print("[Worker] Executing Prophet Model Pipeline...")
+    print("[Worker] Executing Forecast...")
     data = await get_sales_forecast_summary(30)
     return {"raw_data": data}
 
 
 async def churn_node(state: AgentState):
-    print("[Worker] Executing DNN Churn Model Pipeline...")
+    print("[Worker] Executing Churn Analysis...")
     data = await get_churn_risk_by_segment()
     return {"raw_data": data}
 
 
 async def kpi_node(state: AgentState):
-    print("[Worker] Executing Semantic Knowledge Retrieval...")
+    print("[Worker] Executing Deterministic KPI Tool...")
+    user_input = state["user_input"].lower()
+    from src.chatbot.business_toolkit import kpi_engine
+    
+    kpis_list = [f"'{kid}': {info['label']} - {info['description']}" for kid, info in kpi_engine.definitions.items()]
+    kpis_text = "\n".join(kpis_list)
+    
+    prompt = f"""
+Analyze the user's query and extract the target KPI ID and any relevant filters.
+Available KPIs:
+{kpis_text}
+
+User Query: "{state['user_input']}"
+
+Respond STRICTLY in JSON format with two keys:
+- "kpi_id": The exact string ID of the KPI from the list above, or null if none match.
+- "filters": A dictionary of filters (e.g. {{"customer_state": "SP", "order_status": "delivered"}}), or null if no filters. Keep filters simple and matching Olist schema.
+
+Only output valid JSON.
+"""
+    try:
+        res = groq_client.chat.completions.create(
+            model=GUARD_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            response_format={"type": "json_object"}
+        )
+        extraction = json.loads(res.choices[0].message.content)
+        target_kpi = extraction.get("kpi_id")
+        filters = extraction.get("filters")
+    except Exception as e:
+        print(f"[kpi_node] Error extracting KPI: {e}")
+        target_kpi = None
+        filters = None
+
+    if target_kpi and target_kpi in kpi_engine.definitions:
+        print(f"[kpi_node] Extracted KPI: {target_kpi}, Filters: {filters}")
+        val = await execute_deterministic_kpi.ainvoke({"kpi_id": target_kpi, "filters": filters})
+        return {"raw_data": val}
+    
+    # Fallback to general knowledge search if no direct match
+    from src.chatbot.business_toolkit import search_business_knowledge
     data = await search_business_knowledge(state["user_input"], n_results=2)
     return {"raw_data": data}
 
 
 async def other_node(state: AgentState):
-    print("[Worker] Handling non-business input...")
-    msg = "I am an enterprise business intelligence assistant. Please ask me about revenue, orders, customers, forecasts, or churn."
+    msg = "I am an enterprise business intelligence assistant. How can I help with your data today?"
     return {"raw_data": msg, "polisher_output": msg}
 
 
 async def sql_draft_node(state: AgentState):
-    print("[Worker] Drafting SQL Query...")
-    # 1. Fetch relevant business rules via RAG
+    print("[Worker] Drafting SQL...")
     context = await search_business_knowledge(state["user_input"], n_results=2)
     schema = db.get_table_info()
-    
-    # 2. Append error feedback if this is a retry
-    error_feedback = ""
-    if state.get("raw_data") and "Error" in state["raw_data"]:
-         error_feedback = f"YOUR PREVIOUS QUERY FAILED WITH THIS ERROR:\n{state['raw_data']}\nFix the query and try again."
+    error_feedback = f"PREVIOUS ERROR: {state['raw_data']}" if "Error" in state.get("raw_data", "") else ""
 
-    prompt = f"""Write a SQLite SELECT query to answer the following question.
-Question: {state["user_input"]}
-
-Database Schema:
-{schema}
-
-Business Rules (MUST FOLLOW):
-{context}
-
+    prompt = f"""Write SQLite SELECT for: {state["user_input"]}
+Schema: {schema}
+Rules: {context}
 {error_feedback}
-
-Respond with ONLY the raw SQL query. No markdown, no explanation, no backticks."""
+Respond with ONLY raw SQL."""
 
     res = groq_client.chat.completions.create(
         model=REACT_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
     )
-    sql = res.choices[0].message.content.strip()
-    sql = sql.replace("```sql", "").replace("```", "").strip()
+    sql = res.choices[0].message.content.strip().replace("```sql", "").replace("```", "").strip()
     return {"sql_query": sql}
 
 
 async def sql_execute_node(state: AgentState):
-    print("[Worker] Validating and Executing SQL...")
+    print("[Worker] Validating & Executing...")
     sql = state["sql_query"]
-    current_errors = state.get("sql_errors", 0)
-    
-    # 1. Validator Middleware
     for rule in _SQL_RULES:
         if rule["check"](sql):
-            return {
-                "raw_data": f"Validator Error: {rule['error']}", 
-                "sql_errors": current_errors + 1
-            }
-            
-    # 2. Execute
+            return {"raw_data": f"Validator Error: {rule['error']}", "sql_errors": state.get("sql_errors", 0) + 1}
     try:
         data = db.run(sql)
-        return {
-            "raw_data": f"Executed SQL: {sql}\nResults: {data}",
-            "sql_errors": 0 # reset on success
-        }
+        return {"raw_data": f"Results: {data}", "sql_errors": 0}
     except Exception as e:
-        return {
-            "raw_data": f"SQL Execution Error: {str(e)}", 
-            "sql_errors": current_errors + 1
-        }
+        return {"raw_data": f"SQL Error: {str(e)}", "sql_errors": state.get("sql_errors", 0) + 1}
 
 
 async def polish_node(state: AgentState):
-    print("[Polisher] Formatting final response...")
-    if state.get("polisher_output"):
-        return {} # Already handled (e.g. by OTHER node)
-        
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are an executive business formatter.\n"
-                "CRITICAL INSTRUCTIONS:\n"
-                "1. Only use explicitly retrieved facts from the provided data.\n"
-                "2. If information is missing or incomplete, say so explicitly.\n"
-                "3. Do not infer trends, causes, or interpretations unless directly supported by the data.\n"
-                "4. NEVER show raw SQL, column headers, DataFrame text, or tool names.\n"
-            ),
-        }
-    ]
-    
-    # Add minimal chat history context if we had a full state
-    for msg in state.get("messages", [])[-6:]:
-        if isinstance(msg, HumanMessage):
-             messages.append({"role": "user", "content": msg.content})
-        elif isinstance(msg, AIMessage):
-             messages.append({"role": "assistant", "content": msg.content})
-             
-    messages.append({
-        "role": "user",
-        "content": f'Current Question: "{state["user_input"]}"\n\nData retrieved:\n{state["raw_data"]}\n\nFormat this data clearly and professionally.'
-    })
-    
+    if state.get("polisher_output"): return {}
+    messages = [{"role": "system", "content": "You are an executive formatter. Use only retrieved facts. No SQL. No hallucination."}]
+    messages.append({"role": "user", "content": f'Q: "{state["user_input"]}"\nData: {state["raw_data"]}'})
     res = groq_client.chat.completions.create(model=POLISHER_MODEL, messages=messages)
     return {"polisher_output": res.choices[0].message.content.strip()}
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Graph Routing Logic
-# ─────────────────────────────────────────────────────────────────────────────
-def route_intent(state: AgentState) -> str:
-    return state["intent"]
-
-def route_sql_retry(state: AgentState) -> str:
-    # If there's an error and we haven't retried 3 times, draft again
-    if state.get("sql_errors", 0) > 0 and state.get("sql_errors", 0) < 3:
-        print(f"[Router] SQL Error detected. Retrying... (Attempt {state.get('sql_errors')})")
-        return "sql_draft_node"
-    return "polish_node"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. Compile Graph
+# 6. Build Graph
 # ─────────────────────────────────────────────────────────────────────────────
 builder = StateGraph(AgentState)
-
 builder.add_node("router", router_node)
 builder.add_node("forecast_node", forecast_node)
 builder.add_node("churn_node", churn_node)
@@ -286,98 +264,39 @@ builder.add_node("sql_execute_node", sql_execute_node)
 builder.add_node("polish_node", polish_node)
 
 builder.add_edge(START, "router")
-
-builder.add_conditional_edges(
-    "router",
-    route_intent,
-    {
-        "FORECAST": "forecast_node",
-        "CHURN": "churn_node",
-        "KPI": "kpi_node",
-        "SQL": "sql_draft_node",
-        "OTHER": "other_node"
-    }
-)
-
-# Deterministic convergence to Polish node
+builder.add_conditional_edges("router", lambda s: s["intent"], {
+    "FORECAST": "forecast_node", "CHURN": "churn_node", "KPI": "kpi_node", "SQL": "sql_draft_node", "OTHER": "other_node"
+})
 builder.add_edge("forecast_node", "polish_node")
 builder.add_edge("churn_node", "polish_node")
 builder.add_edge("kpi_node", "polish_node")
-builder.add_edge("other_node", END) # Skip polish for invalid queries
-
-# SQL Subgraph Loop
+builder.add_edge("other_node", END)
 builder.add_edge("sql_draft_node", "sql_execute_node")
-builder.add_conditional_edges(
-    "sql_execute_node",
-    route_sql_retry,
-    {
-        "sql_draft_node": "sql_draft_node",
-        "polish_node": "polish_node"
-    }
-)
-
+builder.add_conditional_edges("sql_execute_node", lambda s: "sql_draft_node" if 0 < s.get("sql_errors", 0) < 3 else "polish_node", {
+    "sql_draft_node": "sql_draft_node", "polish_node": "polish_node"
+})
 builder.add_edge("polish_node", END)
 
-# Configure persistent Sqlite Checkpointer
-os.makedirs("data", exist_ok=True)
-conn = sqlite3.connect("data/checkpoints.sqlite", check_same_thread=False)
-memory = SqliteSaver(conn)
+memory = MemorySaver()
 compiled_graph = builder.compile(checkpointer=memory)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Orchestrator Interface
+# 7. Interface
 # ─────────────────────────────────────────────────────────────────────────────
 async def consult_logic_advanced(user_input: str, thread_id: str = "session_1") -> str:
     config = {"configurable": {"thread_id": thread_id}}
-    
-    # Initialize state
-    initial_state = {
-        "user_input": user_input,
-        "messages": [HumanMessage(content=user_input)],
-        "sql_errors": 0,
-        "raw_data": "",
-        "polisher_output": ""
-    }
-    
+    initial_state = {"user_input": user_input, "messages": [HumanMessage(content=user_input)], "sql_errors": 0, "raw_data": "", "polisher_output": ""}
     try:
         result = await compiled_graph.ainvoke(initial_state, config)
-        final_output = result["polisher_output"]
-        
-        # We must manually save the AI's response to the memory stream so the next 
-        # turn's state.messages contains it.
-        # However, LangGraph's checkpointer automatically saves the state dictionary.
-        # But our `messages` reducer requires us to append the AIMessage.
-        # We can update the state explicitly:
-        compiled_graph.update_state(
-            config,
-            {"messages": [AIMessage(content=final_output)]}
-        )
-        
-        return final_output
+        return result["polisher_output"]
     except Exception as e:
         return f"System Error: {str(e)}"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 9. CLI Main Loop
-# ─────────────────────────────────────────────────────────────────────────────
-async def main_loop():
-    print("=" * 65)
-    print("BISFT: DETERMINISTIC ENTERPRISE RAG — LIVE")
-    print("Architecture: Strict StateGraph Routing | SQL Middleware Validation")
-    print("=" * 65)
-
-    while True:
-        try:
-            user_input = input("\n[Owner]: ")
-        except EOFError:
-            break
-        if user_input.lower() in ["exit", "quit"]:
-            break
-        if not user_input.strip():
-            continue
-            
-        response = await consult_logic_advanced(user_input, thread_id="cli_session")
-        print(f"\n[AI Consultant]: {response}")
-
 if __name__ == "__main__":
-    asyncio.run(main_loop())
+    async def main():
+        print("BISFT DETERMINISTIC V2 LIVE")
+        while True:
+            u = input("\n[Owner]: ")
+            if u.lower() in ["exit", "quit"]: break
+            print(f"\n[AI]: {await consult_logic_advanced(u)}")
+    asyncio.run(main())

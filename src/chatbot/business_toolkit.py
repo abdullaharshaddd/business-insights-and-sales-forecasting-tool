@@ -9,6 +9,7 @@ import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 import asyncio
 import diskcache
+from langchain_core.tools import tool
 
 tool_cache = diskcache.Cache("data/tool_cache")
 
@@ -38,6 +39,9 @@ MODEL_REGISTRY_PATH = "config/model_registry.json"
 KPI_DEFINITIONS_PATH = "config/kpi_definitions.json"
 CHURN_MODEL_DIR    = cfg["paths"]["model_dir"]
 VECTOR_DB_PATH     = "data/vector_db"
+from src.analytics.kpi_engine import KPIEngine
+
+kpi_engine = KPIEngine()
 
 # Lazy-loaded vector store (initialized on first use)
 _vector_client = None
@@ -119,10 +123,8 @@ async def get_model_registry(model_name: str = None) -> str:
 @async_cache(expire=86400)
 async def get_kpi_definition(kpi_name: str = None) -> str:
     """
-    Retrieve KPI business definitions and SQL formulas.
-    If kpi_name is provided (e.g. 'aov', 'churn_rate_overall', 'revenue'),
-    returns the definition and SQL for that KPI.
-    If None, returns a list of all available KPI names with their labels.
+    Retrieve KPI business definitions and deterministic values.
+    If kpi_name is provided, returns definition, formula, and CURRENT value.
     """
     try:
         with open(KPI_DEFINITIONS_PATH) as f:
@@ -133,6 +135,15 @@ async def get_kpi_definition(kpi_name: str = None) -> str:
             if not kpi:
                 available = [k for k in kpis.keys() if not k.startswith("_")]
                 return f"KPI '{kpi_name}' not found. Available KPIs: {available}"
+            
+            # Deterministically calculate current value
+            try:
+                val_df = kpi_engine.calculate_kpi(kpi_name)
+                current_value = val_df.iloc[0, 0]
+                kpi["current_value"] = current_value
+            except:
+                kpi["current_value"] = "Calculation pending"
+
             return json.dumps(kpi, indent=2)
         else:
             # Return grouped summary
@@ -312,6 +323,9 @@ async def get_churn_risk_overview() -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # 9. Semantic Business Knowledge Retrieval (Vector RAG)
 # ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. Semantic Business Knowledge Retrieval (Vector RAG)
+# ─────────────────────────────────────────────────────────────────────────────
 @async_cache(expire=86400)
 async def search_business_knowledge(query: str, n_results: int = 3) -> str:
     """
@@ -350,3 +364,35 @@ async def search_business_knowledge(query: str, n_results: int = 3) -> str:
                 "Run: python -m src.chatbot.ingest_knowledge"
             )
         return f"Knowledge retrieval error: {str(e)}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. Unified KPI Tool (Production Standard)
+# ─────────────────────────────────────────────────────────────────────────────
+@tool
+async def execute_deterministic_kpi(kpi_id: str, filters: dict = None) -> str:
+    """
+    Execute a pre-approved, deterministic business KPI from the official registry.
+    Use this for all core metrics (revenue, aov, retention, delivery, etc.) 
+    to ensure 100% consistency with executive dashboards.
+    Provide optional filters as a dictionary, e.g. {"order_status": "delivered"}.
+    """
+    try:
+        # Use the engine to get the deterministic value
+        val_df = kpi_engine.calculate_kpi(kpi_id, filters)
+        
+        if len(val_df) == 1 and len(val_df.columns) == 1:
+            val = val_df.iloc[0, 0]
+            label = kpi_engine.definitions[kpi_id]["label"]
+            unit = kpi_engine.definitions[kpi_id].get("unit", "")
+            
+            if isinstance(val, (int, float)):
+                val_str = f"{val:,.2f}"
+            else:
+                val_str = str(val)
+                
+            return f"OFFICIAL {label}: {val_str} {unit}"
+        else:
+            label = kpi_engine.definitions[kpi_id]["label"]
+            return f"OFFICIAL {label}:\n{val_df.to_string(index=False)}"
+    except Exception as e:
+        return f"KPI Error: {str(e)}. Please use tool_list_all_kpis to see valid IDs."
