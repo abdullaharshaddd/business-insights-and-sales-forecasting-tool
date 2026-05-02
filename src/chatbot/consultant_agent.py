@@ -131,6 +131,18 @@ class AgentState(TypedDict):
 async def router_node(state: AgentState):
     """Classifies: SIMPLE (single-tool), ANALYTICAL (multi-step), or OTHER."""
     user_input = state["user_input"]
+    
+    # Pre-check: ultra-short conversational messages → OTHER immediately
+    short_conversational = {
+        "yeah", "yes", "yep", "yup", "no", "nope", "ok", "okay", "sure",
+        "thanks", "thank you", "thx", "cool", "nice", "great", "best",
+        "alright", "got it", "understood", "bye", "goodbye", "see you",
+        "hmm", "hm", "ah", "oh", "wow", "lol", "haha",
+    }
+    if user_input.strip().lower().rstrip("!.,?") in short_conversational:
+        print(f"\n[Router] Intent: OTHER (conversational shortcut)")
+        return {"intent": "OTHER"}
+
     history = state.get("messages", [])
     history_lines = []
     for m in history[-5:-1]:
@@ -145,12 +157,15 @@ async def router_node(state: AgentState):
   "What are the main business problems?", "Analyze our performance",
   "What should we do about churn?", questions with "why", "how to improve", "root cause", "recommend"
 
-- SIMPLE: Direct single-metric questions. Examples:
+- SIMPLE: Direct single-metric questions that ask for SPECIFIC business data. Examples:
   "What is our revenue?", "Show me the forecast for 30 days",
   "What is the AOV?", "Show churn rates", "What is the delivery rate?"
 
-- OTHER: Greetings, off-topic, or non-business questions.
-  "Hi", "Hello", "What's the weather?"
+- OTHER: Greetings, casual conversation, acknowledgments, off-topic, or non-business questions.
+  "Hi", "Hello", "What's the weather?", "yeah", "okay", "thanks", "alright best",
+  "sure", "got it", "how to make coffee", "tell me a joke"
+
+IMPORTANT: If the query is vague, casual, or does NOT clearly ask for specific business data, classify as OTHER.
 
 Recent Conversation:
 {history_str}
@@ -167,10 +182,10 @@ Respond with ONLY: ANALYTICAL or SIMPLE or OTHER"""
         )
         intent = res.choices[0].message.content.strip().upper()
     except Exception:
-        intent = "SIMPLE"
+        intent = "OTHER"
 
     if intent not in ("ANALYTICAL", "SIMPLE", "OTHER"):
-        intent = "SIMPLE"
+        intent = "OTHER"
 
     print(f"\n[Router] Intent: {intent}")
     return {"intent": intent}
@@ -323,7 +338,7 @@ async def data_gatherer_node(state: AgentState):
                 if tool_name == "investigate_root_causes":
                     # Determine topic from user query
                     topic = "general"
-                    for t in ("revenue", "delivery", "customer", "retention", "churn"):
+                    for t in ("revenue", "delivery", "customer", "retention", "churn", "market basket", "clv", "cancellation"):
                         if t in user_input.lower():
                             topic = t
                             break
@@ -411,7 +426,15 @@ async def simple_executor_node(state: AgentState):
         data = await get_churn_risk_by_segment()
         return {"gathered_data": data}
 
-    # 3. Check for KPI match
+    # 3. Check for direct Analytical Tool match
+    for tool_id, tool_info in ANALYTICAL_TOOLS.items():
+        # Check if query contains tool name or key topics
+        if tool_id in user_input or any(t in user_input for t in tool_info.get("topics", [])):
+            fn = tool_info["fn"]
+            data = fn()
+            return {"gathered_data": data}
+
+    # 4. Check for KPI match
     kpis_list = [f"'{kid}': {info['label']} - {info['description']}"
                  for kid, info in kpi_engine.definitions.items()]
     kpis_text = "\n".join(kpis_list)
@@ -470,22 +493,25 @@ Respond with ONLY raw SQL."""
 # ── 5h. Strategy Synthesizer (The Brain) ────────────────────────────────────
 async def synthesizer_node(state: AgentState):
     """Produce consultant-grade analysis from all gathered evidence."""
-    is_analytical = state.get("intent") == "ANALYTICAL"
+    intent = state.get("intent", "SIMPLE")
+    is_analytical = intent == "ANALYTICAL"
 
-    sys_prompt = """You are a Senior Business Intelligence Consultant at a top-tier consulting firm.
+    if is_analytical:
+        sys_prompt = """You are a Principal Business Intelligence Strategist.
+ROLE: Synthesize complex data into a high-level executive briefing.
+STRUCTURE:
+1. EXECUTIVE SUMMARY: 1-2 punchy sentences on the core finding.
+2. DATA EVIDENCE: Key numbers and trends discovered.
+3. CAUSAL ANALYSIS: Why is this happening? (Connect the dots).
+4. STRATEGIC RECOMMENDATIONS: 3-4 specific, bold actions.
+5. NEXT BEST ACTION: What should we do in the next 24 hours?
 
-ROLE: Synthesize data from multiple analytical tools into a cohesive, actionable business briefing.
-
-RULES:
-- Lead with the KEY INSIGHT (1-2 sentences capturing the most important finding)
-- Present ROOT CAUSES backed by data (not speculation)
-- Provide SPECIFIC, ACTIONABLE RECOMMENDATIONS (not generic advice)
-- Use exact numbers from the data provided
-- Structure your response with clear headers
-- If past findings are available, reference them for continuity
-- Keep total response under 400 words
-- Never show SQL or technical internals
-- If the question is simple, give a concise answer with context"""
+TONE: Professional, authoritative, and strategic. Never show code or SQL."""
+    else:
+        sys_prompt = """You are a professional and friendly Business Intelligence Consultant.
+ROLE: Provide a clear, direct, and human response to a specific data question.
+TONE: Helpful and conversational. Don't use heavy headers or long bulleted lists unless necessary.
+RULE: Give the answer immediately, provide brief context, and ask if the user wants a deeper analysis."""
 
     messages = [{"role": "system", "content": sys_prompt}]
 

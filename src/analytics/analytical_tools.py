@@ -353,32 +353,118 @@ def analyze_geographic_distribution() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 9. Payment Analysis
+# 10. Market Basket Analysis (Category Correlations)
 # ─────────────────────────────────────────────────────────────────────────────
-def analyze_payment_patterns() -> str:
-    """Payment method distribution and installment patterns."""
+def analyze_market_basket() -> str:
+    """Identify top product category pairs frequently bought together in the same order."""
     sql = """
-    SELECT payment_type,
-           COUNT(*) AS txn_count,
-           ROUND(SUM(payment_value), 2) AS total_value,
-           ROUND(AVG(payment_installments), 1) AS avg_installments
-    FROM order_payments
-    GROUP BY 1 ORDER BY total_value DESC
+    SELECT t1.product_category_name_english AS cat1,
+           t2.product_category_name_english AS cat2,
+           COUNT(*) AS frequency
+    FROM order_items oi1
+    JOIN order_items oi2 ON oi1.order_id = oi2.order_id AND oi1.product_id < oi2.product_id
+    JOIN products p1 ON oi1.product_id = p1.product_id
+    JOIN products p2 ON oi2.product_id = p2.product_id
+    JOIN product_category_name_translation t1 ON p1.product_category_name = t1.product_category_name
+    JOIN product_category_name_translation t2 ON p2.product_category_name = t2.product_category_name
+    GROUP BY 1, 2
+    ORDER BY frequency DESC
+    LIMIT 10
     """
     conn = _conn()
     try:
         df = pd.read_sql_query(sql, conn)
         if df.empty:
-            return "No payment data."
+            return "No cross-category purchase patterns found."
 
-        total_val = df["total_value"].sum()
-        lines = ["[Payment Pattern Analysis]\n"]
+        lines = ["[Market Basket Analysis — Top Category Pairs]\n"]
         for _, r in df.iterrows():
-            share = r["total_value"] / total_val * 100
+            lines.append(f"  {r['cat1']} + {r['cat2']} : {r['frequency']} times")
+        
+        lines.append("\nInsight: Use these pairs for 'Frequently Bought Together' recommendations.")
+        return "\n".join(lines)
+    finally:
+        conn.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. Customer Lifetime Value (CLV) by Segment
+# ─────────────────────────────────────────────────────────────────────────────
+def estimate_clv_by_segment() -> str:
+    """Estimate historical CLV based on total spend and order frequency."""
+    sql = """
+    SELECT customer_unique_id,
+           COUNT(DISTINCT order_id) AS frequency,
+           SUM(price + freight_value) AS total_spent
+    FROM orders o
+    JOIN customers c ON o.customer_id = c.customer_id
+    JOIN order_items oi ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY 1
+    """
+    conn = _conn()
+    try:
+        df = pd.read_sql_query(sql, conn)
+        if df.empty:
+            return "No CLV data available."
+
+        # Simplistic segmentation based on quantiles
+        df['segment'] = pd.qcut(df['total_spent'], 4, labels=['Low-Value', 'Mid-Value', 'High-Value', 'Top-Tier'])
+        
+        clv_stats = df.groupby('segment').agg({
+            'customer_unique_id': 'count',
+            'total_spent': 'mean',
+            'frequency': 'mean'
+        }).rename(columns={'customer_unique_id': 'n_customers', 'total_spent': 'avg_clv', 'frequency': 'avg_freq'})
+
+        lines = ["[Estimated CLV by Segment — Historical Basis]\n"]
+        for seg, r in clv_stats.iterrows():
             lines.append(
-                f"  {r['payment_type']}: R${r['total_value']:,.2f} ({share:.1f}%) | "
-                f"Txns: {int(r['txn_count']):,} | Avg Installments: {r['avg_installments']}"
+                f"  {seg:<12} | Customers: {int(r['n_customers']):>5} | "
+                f"Avg CLV: R${r['avg_clv']:>7.2f} | Avg Freq: {r['avg_freq']:.2f}"
             )
+        
+        overall_avg = df['total_spent'].mean()
+        lines.append(f"\nOverall Marketplace Avg CLV: R${overall_avg:.2f}")
+        return "\n".join(lines)
+    finally:
+        conn.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 12. Order Cancellation Analysis
+# ─────────────────────────────────────────────────────────────────────────────
+def analyze_order_cancellation() -> str:
+    """Analyze cancellation rates and potential revenue loss."""
+    sql = """
+    SELECT order_status,
+           COUNT(*) AS order_count,
+           strftime('%Y-%m', order_purchase_timestamp) AS month
+    FROM orders
+    GROUP BY 1, 3
+    """
+    conn = _conn()
+    try:
+        df = pd.read_sql_query(sql, conn)
+        if df.empty:
+            return "No cancellation data."
+
+        pivot = df.pivot(index='month', columns='order_status', values='order_count').fillna(0)
+        if 'canceled' not in pivot.columns:
+            return "No canceled orders found in data."
+            
+        pivot['total'] = pivot.sum(axis=1)
+        pivot['cancel_rate'] = (pivot['canceled'] / pivot['total'] * 100).round(2)
+        
+        recent = pivot.tail(6)
+        avg_rate = recent['cancel_rate'].mean()
+
+        lines = ["[Order Cancellation Analysis]\n"]
+        lines.append(f"Avg Recent Cancellation Rate: {avg_rate:.2f}%")
+        lines.append("Monthly Cancellation Trend:")
+        for m, r in recent.iterrows():
+            lines.append(f"  {m}: {r['canceled']:.0f} canceled / {r['total']:.0f} total ({r['cancel_rate']:.2f}%)")
+            
         return "\n".join(lines)
     finally:
         conn.close()
@@ -427,6 +513,21 @@ ANALYTICAL_TOOLS = {
         "fn": analyze_payment_patterns,
         "description": "Payment method distribution and installments",
         "topics": ["payments", "installments", "credit"],
+    },
+    "analyze_market_basket": {
+        "fn": analyze_market_basket,
+        "description": "Cross-selling patterns and category correlations",
+        "topics": ["cross-sell", "market basket", "recommendations", "association"],
+    },
+    "estimate_clv_by_segment": {
+        "fn": estimate_clv_by_segment,
+        "description": "Customer Lifetime Value estimation by value segment",
+        "topics": ["clv", "lifetime value", "profitability", "segments"],
+    },
+    "analyze_order_cancellation": {
+        "fn": analyze_order_cancellation,
+        "description": "Order cancellation rates and revenue leakage",
+        "topics": ["cancellations", "leakage", "returns", "issues"],
     },
     "investigate_root_causes": {
         "fn": investigate_root_causes,
