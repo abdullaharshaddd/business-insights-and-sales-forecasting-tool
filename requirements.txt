@@ -25,6 +25,6 @@ holidays>=0.25
 torch>=2.0
 
 # ── NL2SQL Chatbot (future phases) ───────────────────────
-# langchain>=0.1
-# langchain-community>=0.0.20
-# sqlalchemy>=2.0
+langchain>=0.1
+langchain-community>=0.0.20
+sqlalchemy>=2.0
