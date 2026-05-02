@@ -176,13 +176,39 @@ Respond with ONLY: ANALYTICAL or SIMPLE or OTHER"""
     return {"intent": intent}
 
 
-# ── 5b. Greeting Node ────────────────────────────────────────────────────────
+# ── 5b. Conversational Node (Greetings, Thanks, Off-topic) ───────────────────
 async def greeting_node(state: AgentState):
-    msg = (
-        "Hello! I'm your AI Business Intelligence Consultant. "
-        "I can analyze revenue trends, investigate churn, forecast sales, "
-        "and provide strategic recommendations. What would you like to explore?"
-    )
+    """Generate natural, context-aware responses for non-analytical queries."""
+    history_msgs = []
+    for m in state.get("messages", [])[:-1]:
+        role = "user" if getattr(m, "type", "") == "human" else "assistant"
+        history_msgs.append({"role": role, "content": m.content[:300]})
+
+    messages = [
+        {"role": "system", "content": (
+            "You are a friendly, professional AI Business Intelligence Consultant. "
+            "Respond naturally and conversationally. Keep responses short (1-3 sentences). "
+            "If the user greets you, greet them warmly and mention you can help with business analytics. "
+            "If the user thanks you or says 'great/best/nice', acknowledge warmly and ask if there's anything else. "
+            "If the user asks something off-topic (not business/data related), politely let them know "
+            "your expertise is in business intelligence and offer to help with data analysis instead. "
+            "Never repeat the same response twice. Be human, not robotic."
+        )},
+        *history_msgs,
+        {"role": "user", "content": state["user_input"]},
+    ]
+
+    try:
+        res = groq_client.chat.completions.create(
+            model=GUARD_MODEL,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=150,
+        )
+        msg = res.choices[0].message.content.strip()
+    except Exception:
+        msg = "Hello! I'm your AI Business Intelligence Consultant. How can I help you with your data today?"
+
     return {"final_output": msg, "messages": [AIMessage(content=msg)]}
 
 
