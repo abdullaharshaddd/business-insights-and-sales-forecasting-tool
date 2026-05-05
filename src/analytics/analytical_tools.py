@@ -509,11 +509,7 @@ ANALYTICAL_TOOLS = {
         "description": "Revenue and orders by state/region",
         "topics": ["geography", "region", "state", "location"],
     },
-    "analyze_payment_patterns": {
-        "fn": analyze_payment_patterns,
-        "description": "Payment method distribution and installments",
-        "topics": ["payments", "installments", "credit"],
-    },
+   
     "analyze_market_basket": {
         "fn": analyze_market_basket,
         "description": "Cross-selling patterns and category correlations",
