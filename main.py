@@ -1,28 +1,68 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from src.chatbot.business_toolkit import query_database, get_sales_forecast_summary, get_churn_risk_overview
+"""
+BISFT — Business Insights & Sales Forecasting Tool
+FastAPI Backend — Main Entry Point
+"""
 import os
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-app = FastAPI(title="BISFT Strategic Consultant API")
+load_dotenv()
 
-class ChatRequest(BaseModel):
-    message: str
+from api.routers import dashboard, forecasting, churn, chat, analytics
 
-# This is where we will integrate the "Brain"
-# For now, it uses the logic from your agent but as a Web API
-@app.post("/chat")
-async def chat_endpoint(request: ChatRequest):
-    try:
-        # Here you would call your consult_logic
-        # In a real app, you'd use Groq or OpenAI here for instant speed
-        return {"response": f"The consultant received: {request.message}. (Logic ready to be connected)"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+app = FastAPI(
+    title="BISFT Strategic Consultant API",
+    description="AI-Powered Decision Intelligence Platform for Business Analytics",
+    version="2.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+)
 
-@app.get("/status")
-async def get_status():
-    return {"status": "online", "database": "connected"}
+# ── CORS — allow React dev server ────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",   # Vite dev server
+        "http://localhost:3000",   # fallback
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Register routers ──────────────────────────────────────────────────────────
+app.include_router(dashboard.router)
+app.include_router(forecasting.router)
+app.include_router(churn.router)
+app.include_router(chat.router)
+app.include_router(analytics.router)
+
+
+@app.get("/")
+def root():
+    return {
+        "name": "BISFT Strategic Consultant API",
+        "version": "2.0.0",
+        "status": "online",
+        "docs": "/api/docs",
+        "endpoints": {
+            "kpis": "/api/dashboard/kpis",
+            "system_status": "/api/dashboard/status",
+            "forecast": "/api/forecast?days=30",
+            "forecast_metrics": "/api/forecast/metrics",
+            "churn_segments": "/api/churn/segments",
+            "churn_models": "/api/churn/models",
+            "chat": "POST /api/chat",
+            "analytics_tools": "/api/analytics/tools",
+            "analytics_run": "POST /api/analytics/run",
+        },
+    }
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Auto-reload triggered
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
