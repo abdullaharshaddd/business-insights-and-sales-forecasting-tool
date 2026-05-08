@@ -509,7 +509,6 @@ ANALYTICAL_TOOLS = {
         "description": "Revenue and orders by state/region",
         "topics": ["geography", "region", "state", "location"],
     },
-   
     "analyze_market_basket": {
         "fn": analyze_market_basket,
         "description": "Cross-selling patterns and category correlations",
