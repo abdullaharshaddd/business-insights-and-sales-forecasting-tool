@@ -18,6 +18,11 @@ paths:
   prophet_model: models/forecasting/prophet_model.pkl
   forecasting_eval: evaluation/forecasting/
 
+# ── Database Configuration ───────────────────────────────────────────────────
+database:
+  type: postgresql
+  url: "postgresql://postgres:abdullahknows01%23@localhost:5432/bisft_inventory"
+
 # ── Churn Feature Engineering ─────────────────────────────────────────────────
 features:
   snapshot_date: "2011-12-10"    # last date in Online Retail data

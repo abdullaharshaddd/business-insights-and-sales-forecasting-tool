@@ -1,0 +1,369 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  manager
+  staff
+  viewer
+}
+
+enum ProductStatus {
+  active
+  inactive
+  archived
+  discontinued
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  RESERVATION
+  RELEASE
+  RETURN
+}
+
+enum PurchaseOrderStatus {
+  draft
+  submitted
+  confirmed
+  partial
+  received
+  cancelled
+}
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  fullName      String   @map("full_name")
+  role          UserRole @default(staff)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
+  auditLogs      AuditLog[]
+
+  @@map("users")
+}
+
+// ─── Categories ─────────────────────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  namePt      String?  @map("name_pt")
+  slug        String   @unique
+  parentId    String?  @map("parent_id")
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@map("categories")
+}
+
+// ─── Products ───────────────────────────────────────────────────────────────
+
+model Product {
+  id          String        @id @default(uuid())
+  legacyId    String?       @map("legacy_id")
+  sku         String        @unique
+  barcode     String?       @unique
+  name        String
+  description String?
+  categoryId  String?       @map("category_id")
+  supplierId  String?       @map("supplier_id")
+  status      ProductStatus @default(active)
+
+  // Pricing
+  basePrice   Decimal @default(0) @map("base_price") @db.Decimal(10, 2)
+  costPrice   Decimal? @map("cost_price") @db.Decimal(10, 2)
+
+  // Physical attributes (from Olist)
+  weightG     Decimal? @map("weight_g") @db.Decimal(10, 2)
+  lengthCm    Decimal? @map("length_cm") @db.Decimal(10, 2)
+  heightCm    Decimal? @map("height_cm") @db.Decimal(10, 2)
+  widthCm     Decimal? @map("width_cm") @db.Decimal(10, 2)
+  photosQty   Int      @default(0) @map("photos_qty")
+
+  // Inventory thresholds
+  reorderPoint Int @default(10) @map("reorder_point")
+  reorderQty   Int @default(50) @map("reorder_qty")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  category           Category?           @relation(fields: [categoryId], references: [id])
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id])
+  inventory          Inventory?
+  stockMovements     StockMovement[]
+  purchaseOrderItems PurchaseOrderItem[]
+  orderItems         OrderItem[]
+
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([sku])
+  @@map("products")
+}
+
+// ─── Inventory ──────────────────────────────────────────────────────────────
+
+model Inventory {
+  id            String    @id @default(uuid())
+  productId     String    @unique @map("product_id")
+  quantity      Int       @default(0)
+  reservedQty   Int       @default(0) @map("reserved_qty")
+  lastRestockAt DateTime? @map("last_restock_at")
+  lastSoldAt    DateTime? @map("last_sold_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+
+  @@map("inventory")
+}
+
+// ─── Stock Movements ────────────────────────────────────────────────────────
+
+model StockMovement {
+  id             String       @id @default(uuid())
+  productId      String       @map("product_id")
+  inventoryId    String       @map("inventory_id")
+  movementType   MovementType @map("movement_type")
+  quantity       Int
+  quantityBefore Int          @map("quantity_before")
+  quantityAfter  Int          @map("quantity_after")
+  reason         String?
+  referenceType  String?      @map("reference_type")
+  referenceId    String?      @map("reference_id")
+  performedBy    String       @map("performed_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  product   Product   @relation(fields: [productId], references: [id])
+  inventory Inventory @relation(fields: [inventoryId], references: [id])
+  user      User      @relation(fields: [performedBy], references: [id])
+
+  @@index([productId])
+  @@index([movementType])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+// ─── Suppliers ──────────────────────────────────────────────────────────────
+
+model Supplier {
+  id              String  @id @default(uuid())
+  legacySellerId  String? @map("legacy_seller_id")
+  name            String
+  email           String?
+  phone           String?
+  contactPerson   String? @map("contact_person")
+  city            String?
+  state           String?
+  zipCode         String? @map("zip_code")
+  paymentTerms    String? @map("payment_terms")
+  leadTimeDays    Int     @default(7) @map("lead_time_days")
+  isActive        Boolean @default(true) @map("is_active")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+  orderItems     OrderItem[]
+
+  @@map("suppliers")
+}
+
+// ─── Purchase Orders ────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id           String              @id @default(uuid())
+  poNumber     String              @unique @map("po_number")
+  supplierId   String              @map("supplier_id")
+  status       PurchaseOrderStatus @default(draft)
+  orderDate    DateTime            @default(now()) @map("order_date")
+  expectedDate DateTime?           @map("expected_date")
+  receivedDate DateTime?           @map("received_date")
+  totalAmount  Decimal?            @map("total_amount") @db.Decimal(12, 2)
+  notes        String?
+  createdBy    String              @map("created_by")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  user     User                @relation(fields: [createdBy], references: [id])
+  items    PurchaseOrderItem[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String @id @default(uuid())
+  purchaseOrderId String @map("purchase_order_id")
+  productId       String @map("product_id")
+  quantityOrdered Int    @map("quantity_ordered")
+  quantityReceived Int   @default(0) @map("quantity_received")
+  unitCost        Decimal @map("unit_cost") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product       Product       @relation(fields: [productId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// ─── Audit Logs ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Historical Olist Data (Unified) ──────────────────────────────────────
+
+model Customer {
+  id               String  @id @map("customer_id")
+  uniqueId         String  @map("customer_unique_id")
+  zipCodePrefix    Int     @map("customer_zip_code_prefix")
+  city             String  @map("customer_city")
+  state            String  @map("customer_state")
+  
+  orders           Order[]
+
+  @@map("customers")
+}
+
+model Order {
+  id                         String    @id @map("order_id")
+  customerId                 String    @map("customer_id")
+  status                     String    @map("order_status")
+  purchaseTimestamp          DateTime? @map("order_purchase_timestamp")
+  approvedAt                 DateTime? @map("order_approved_at")
+  deliveredCarrierDate       DateTime? @map("order_delivered_carrier_date")
+  deliveredCustomerDate      DateTime? @map("order_delivered_customer_date")
+  estimatedDeliveryDate      DateTime? @map("order_estimated_delivery_date")
+
+  customer                   Customer  @relation(fields: [customerId], references: [id])
+  items                      OrderItem[]
+  payments                   OrderPayment[]
+  reviews                    OrderReview[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  orderId              String  @map("order_id")
+  orderItemId          Int     @map("order_item_id")
+  productId            String  @map("product_id")
+  sellerId             String  @map("seller_id")
+  shippingLimitDate    DateTime? @map("shipping_limit_date")
+  price                Decimal @db.Decimal(10, 2)
+  freightValue         Decimal @map("freight_value") @db.Decimal(10, 2)
+
+  order                Order   @relation(fields: [orderId], references: [id])
+  product              Product @relation(fields: [productId], references: [id])
+  supplier             Supplier @relation(fields: [sellerId], references: [id])
+
+  @@id([orderId, orderItemId])
+  @@map("order_items")
+}
+
+model OrderPayment {
+  orderId              String  @map("order_id")
+  paymentSequential    Int     @map("payment_sequential")
+  paymentType          String  @map("payment_type")
+  paymentInstallments  Int     @map("payment_installments")
+  paymentValue         Decimal @map("payment_value") @db.Decimal(10, 2)
+
+  order                Order   @relation(fields: [orderId], references: [id])
+
+  @@id([orderId, paymentSequential])
+  @@map("order_payments")
+}
+
+model OrderReview {
+  id                   String  @id @map("review_id")
+  orderId              String  @map("order_id")
+  reviewScore          Int     @map("review_score")
+  reviewCommentTitle   String? @map("review_comment_title")
+  reviewCommentMessage String? @map("review_comment_message")
+  reviewCreationDate   DateTime? @map("review_creation_date")
+  reviewAnswerTimestamp DateTime? @map("review_answer_timestamp")
+
+  order                Order   @relation(fields: [orderId], references: [id])
+
+  @@map("order_reviews")
+}
+
+model Geolocation {
+  zipCodePrefix        Int     @map("geolocation_zip_code_prefix")
+  lat                  Float @map("geolocation_lat")
+  lng                  Float @map("geolocation_lng")
+  city                 String  @map("geolocation_city")
+  state                String  @map("geolocation_state")
+
+  @@id([zipCodePrefix, lat, lng])
+  @@map("geolocation")
+}
+
+// ─── Agent Memory Store (Unified) ────────────────────────────────────────
+
+model Finding {
+  id               Int      @id @default(autoincrement())
+  timestamp        DateTime @default(now())
+  topic            String
+  finding          String   @db.Text
+  source           String   @default("agent")
+  importance       String   @default("normal")
+
+  @@map("findings")
+  @@index([topic])
+}
+
+model ConversationSummary {
+  id               Int      @id @default(autoincrement())
+  timestamp        DateTime @default(now())
+  threadId         String   @map("thread_id")
+  summary          String   @db.Text
+  keyTopics        String?  @map("key_topics") // JSON string
+
+  @@map("conversation_summaries")
+  @@index([threadId])
+}

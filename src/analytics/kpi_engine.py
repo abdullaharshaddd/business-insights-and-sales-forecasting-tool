@@ -1,8 +1,8 @@
-import sqlite3
 import json
 import pandas as pd
 import yaml
 import os
+from sqlalchemy import create_engine
 
 class KPIEngine:
     """
@@ -13,15 +13,14 @@ class KPIEngine:
         with open(config_path) as f:
             cfg = yaml.safe_load(f)
         
-        self.db_path = cfg["paths"]["olist_db"]
+        self.db_url = cfg["database"]["url"]
+        self.engine = create_engine(self.db_url)
         
         with open(kpi_path) as f:
             self.definitions = json.load(f)
 
     def _get_connection(self):
-        # Use read-only mode for safety
-        safe_path = self.db_path.replace("\\", "/")
-        return sqlite3.connect(f"file:{safe_path}?mode=ro&uri=true", uri=True)
+        return self.engine.connect()
 
     def calculate_kpi(self, kpi_id, filters: dict = None):
         """Calculate a specific KPI by its ID from the registry."""
@@ -32,16 +31,18 @@ class KPIEngine:
         formula = kpi["sql_formula"]
         
         where_clause = ""
-        params = []
+        query_params = {}
         if filters:
             conditions = []
-            for k, v in filters.items():
+            for i, (k, v) in enumerate(filters.items()):
+                param_name = f"p{i}"
                 if isinstance(v, list) and len(v) == 2 and k.endswith("_date"):
-                    conditions.append(f"{k} >= ? AND {k} <= ?")
-                    params.extend(v)
+                    conditions.append(f"{k} >= :{param_name}_start AND {k} <= :{param_name}_end")
+                    query_params[f"{param_name}_start"] = v[0]
+                    query_params[f"{param_name}_end"] = v[1]
                 else:
-                    conditions.append(f"{k} = ?")
-                    params.append(v)
+                    conditions.append(f"{k} = :{param_name}")
+                    query_params[param_name] = v
             if conditions:
                 where_clause = " WHERE " + " AND ".join(conditions)
 
@@ -52,16 +53,15 @@ class KPIEngine:
             query = f"SELECT {formula} as value FROM {table}{where_clause}"
         else:
             if where_clause:
-                query = f"SELECT * FROM ({formula}) {where_clause}"
+                # Basic wrapping — note: if formula is complex, this might need refinement
+                query = f"SELECT * FROM ({formula}) sub {where_clause}"
             else:
                 query = formula
 
-        conn = self._get_connection()
-        try:
-            df = pd.read_sql_query(query, conn, params=params)
+        from sqlalchemy import text
+        with self.engine.connect() as conn:
+            df = pd.read_sql_query(text(query), conn, params=query_params)
             return df
-        finally:
-            conn.close()
 
     def get_all_kpis_summary(self):
         """Returns a dictionary of all core KPI values for a dashboard summary."""

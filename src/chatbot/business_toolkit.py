@@ -29,25 +29,30 @@ def async_cache(expire=3600):
 # ─────────────────────────────────────────────────────────────────────────────
 # Config
 # ─────────────────────────────────────────────────────────────────────────────
+from sqlalchemy import create_engine, text
+
 with open("config/config.yaml") as f:
     cfg = yaml.safe_load(f)
 
-DB_PATH            = cfg["paths"]["olist_db"]
+DB_URL              = cfg["database"]["url"]
 PROPHET_MODEL_PATH = cfg["paths"]["prophet_model"]
+# ... rest of paths ...
+# (I'll keep the other path variables as they were)
 FORECASTING_EVAL   = cfg["paths"]["forecasting_eval"]
 MODEL_REGISTRY_PATH = "config/model_registry.json"
 KPI_DEFINITIONS_PATH = "config/kpi_definitions.json"
 CHURN_MODEL_DIR    = cfg["paths"]["model_dir"]
 VECTOR_DB_PATH     = "data/vector_db"
-from src.analytics.kpi_engine import KPIEngine
 
+engine = create_engine(DB_URL)
+
+from src.analytics.kpi_engine import KPIEngine
 kpi_engine = KPIEngine()
 
 # Lazy-loaded vector store (initialized on first use)
 _vector_client = None
 _vector_collection = None
 _embed_fn = SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-
 
 def _get_vector_collection():
     """Return ChromaDB collection, initializing client on first use."""
@@ -60,22 +65,19 @@ def _get_vector_collection():
         )
     return _vector_collection
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 1. SQL Tool
 # ─────────────────────────────────────────────────────────────────────────────
 def query_database(query: str) -> str:
-    """Execute a SQL query against the Olist SQLite database and return results as a string."""
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        df = pd.read_sql_query(query, conn)
-        if df.empty:
-            return "Query returned no results."
-        return df.to_string(index=False)
-    except Exception as e:
-        return f"SQL Error: {str(e)}"
-    finally:
-        conn.close()
+    """Execute a SQL query against the unified PostgreSQL database and return results as a string."""
+    with engine.connect() as conn:
+        try:
+            df = pd.read_sql_query(text(query), conn)
+            if df.empty:
+                return "Query returned no results."
+            return df.to_string(index=False)
+        except Exception as e:
+            return f"SQL Error: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
