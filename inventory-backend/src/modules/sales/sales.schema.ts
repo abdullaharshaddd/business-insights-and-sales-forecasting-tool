@@ -1,0 +1,46 @@
+import { z } from 'zod';
+
+export const saleItemSchema = z.object({
+  productId: z.string().uuid('Invalid product ID'),
+  quantity: z.number().int().positive('Quantity must be greater than 0'),
+  unitPrice: z.number().positive('Unit price must be greater than 0'),
+});
+
+export const createSaleSchema = z.object({
+  body: z.object({
+    customerId: z.string().optional(),
+    status: z.enum(['draft', 'completed']).optional().default('draft'),
+    items: z.array(saleItemSchema).min(1, 'Sale must have at least one item'),
+    notes: z.string().optional(),
+  }),
+});
+
+export const batchCreateSalesSchema = z.object({
+  body: z.object({
+    sales: z.array(
+      z.object({
+        customerId: z.string().optional(),
+        items: z.array(saleItemSchema).min(1),
+        notes: z.string().optional(),
+      })
+    ).min(1, 'Batch must contain at least one sale'),
+  }),
+});
+
+export const updateSaleStatusSchema = z.object({
+  body: z.object({
+    status: z.enum(['completed', 'cancelled', 'refunded']),
+  }),
+});
+
+export const recalculateMetricsSchema = z.object({
+  body: z.object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be YYYY-MM-DD').optional(),
+  }),
+});
+
+export type CreateSaleInput = z.infer<typeof createSaleSchema>['body'];
+export type BatchCreateSalesInput = z.infer<typeof batchCreateSalesSchema>['body'];
+export type SaleItemInput = z.infer<typeof saleItemSchema>;
+export type RecalculateMetricsInput = z.infer<typeof recalculateMetricsSchema>['body'];
