@@ -9,6 +9,7 @@ export const saleItemSchema = z.object({
 export const createSaleSchema = z.object({
   body: z.object({
     customerId: z.string().optional(),
+    status: z.enum(['draft', 'completed']).optional().default('draft'),
     items: z.array(saleItemSchema).min(1, 'Sale must have at least one item'),
     notes: z.string().optional(),
   }),
@@ -32,6 +33,14 @@ export const updateSaleStatusSchema = z.object({
   }),
 });
 
+export const recalculateMetricsSchema = z.object({
+  body: z.object({
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'endDate must be YYYY-MM-DD').optional(),
+  }),
+});
+
 export type CreateSaleInput = z.infer<typeof createSaleSchema>['body'];
 export type BatchCreateSalesInput = z.infer<typeof batchCreateSalesSchema>['body'];
 export type SaleItemInput = z.infer<typeof saleItemSchema>;
+export type RecalculateMetricsInput = z.infer<typeof recalculateMetricsSchema>['body'];
