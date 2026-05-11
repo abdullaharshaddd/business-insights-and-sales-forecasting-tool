@@ -45,26 +45,26 @@ def analyze_revenue_trends() -> str:
             df["mom_growth"] = df["revenue"].pct_change() * 100
             df["avg_order_value"] = (df["revenue"] / df["orders"]).astype(float).round(2)
 
-        recent = df.tail(6)
-        overall_trend = "GROWING" if recent["mom_growth"].mean() > 0 else "DECLINING"
-        peak = df.loc[df["revenue"].idxmax()]
-        low = df.loc[df["revenue"].idxmin()]
+            recent = df.tail(6)
+            overall_trend = "GROWING" if recent["mom_growth"].mean() > 0 else "DECLINING"
+            peak = df.loc[df["revenue"].idxmax()]
+            low = df.loc[df["revenue"].idxmin()]
 
-        lines = [
-            "[Revenue Trend Analysis]\n",
-            f"Overall Trend (last 6 months): {overall_trend}",
-            f"Avg MoM Growth (last 6 months): {recent['mom_growth'].mean():.1f}%",
-            f"Peak Month: {peak['month']} (R${peak['revenue']:,.2f})",
-            f"Lowest Month: {low['month']} (R${low['revenue']:,.2f})\n",
-            "Monthly Breakdown (last 6):",
-        ]
-        for _, r in recent.iterrows():
-            g = f"+{r['mom_growth']:.1f}%" if r["mom_growth"] > 0 else f"{r['mom_growth']:.1f}%"
-            lines.append(f"  {r['month']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | MoM: {g}")
+            lines = [
+                "[Revenue Trend Analysis]\n",
+                f"Overall Trend (last 6 months): {overall_trend}",
+                f"Avg MoM Growth (last 6 months): {recent['mom_growth'].mean():.1f}%",
+                f"Peak Month: {peak['month']} (R${peak['revenue']:,.2f})",
+                f"Lowest Month: {low['month']} (R${low['revenue']:,.2f})\n",
+                "Monthly Breakdown (last 6):",
+            ]
+            for _, r in recent.iterrows():
+                g = f"+{r['mom_growth']:.1f}%" if r["mom_growth"] > 0 else f"{r['mom_growth']:.1f}%"
+                lines.append(f"  {r['month']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | MoM: {g}")
 
-        return "\n".join(lines)
-    finally:
-        conn.close()
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error analyzing revenue: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -106,8 +106,8 @@ def analyze_delivery_performance() -> str:
                     f"Avg {r['avg_delivery_days']} days | Delay: {r['avg_delay_days']} days"
                 )
             return "\n".join(lines)
-        finally:
-            pass
+        except Exception as e:
+            return f"Error analyzing delivery: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

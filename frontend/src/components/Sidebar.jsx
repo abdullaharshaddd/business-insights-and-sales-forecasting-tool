@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import api from '../api/client'
+import { useAuth } from '../context/AuthContext'
 
 const NAV_ITEMS = [
   { to: '/dashboard',   icon: '⚡', label: 'Overview' },
@@ -18,6 +19,7 @@ const OPS_ITEMS = [
 
 export default function Sidebar() {
   const location = useLocation()
+  const { user, logout } = useAuth()
   const [systemStatus, setSystemStatus] = useState(null)
 
   useEffect(() => {
@@ -72,6 +74,16 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="sidebar-footer">
+        {user && (
+          <div className="user-profile">
+            <div className="user-avatar">{user.email[0].toUpperCase()}</div>
+            <div className="user-info">
+              <span className="user-email">{user.email}</span>
+              <button className="logout-btn" onClick={logout}>Sign Out</button>
+            </div>
+          </div>
+        )}
+
         {systemStatus ? (
           <div className="sidebar-badge">
             <div className={`status-dot`} style={{
@@ -88,10 +100,64 @@ export default function Sidebar() {
             <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Checking status...</span>
           </div>
         )}
+
         <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
           FAST-NUCES • Academic Project
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .user-profile {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: var(--bg-elevated);
+          border-radius: var(--radius-md);
+          margin-bottom: 12px;
+        }
+        .user-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: var(--indigo);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 14px;
+        }
+        .user-info {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .user-email {
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--text-primary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .logout-btn {
+          background: none;
+          border: none;
+          color: var(--danger);
+          font-size: 10px;
+          font-weight: 700;
+          padding: 0;
+          text-align: left;
+          cursor: pointer;
+          opacity: 0.8;
+          transition: opacity 0.2s;
+        }
+        .logout-btn:hover {
+          opacity: 1;
+          text-decoration: underline;
+        }
+      `}} />
     </aside>
   )
 }

@@ -73,8 +73,18 @@ def system_status():
         with open("config/config.yaml") as f:
             cfg = yaml.safe_load(f)
 
+        from sqlalchemy import create_engine, text
+        engine = create_engine(cfg["database"]["url"])
+        db_ok = False
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                db_ok = True
+        except:
+            db_ok = False
+
         checks = {
-            "olist_db": os.path.exists(cfg["paths"]["olist_db"]),
+            "database": db_ok,
             "prophet_model": os.path.exists(cfg["paths"].get("prophet_model", "")),
             "churn_model": os.path.exists(os.path.join(cfg["paths"]["model_dir"], "churn_dnn_best.h5")),
             "vector_db": os.path.exists("data/vector_db"),

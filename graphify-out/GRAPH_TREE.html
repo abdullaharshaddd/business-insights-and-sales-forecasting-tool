@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>/ — graphify tree viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      margin: 20px 0 0 24px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #1e3a56;
+    }
+    .controls {
+      margin: 20px 0 15px 24px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 18px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:active {
+      background: #004085;
+    }
+    #tree-container {
+      width: calc(100vw - 48px); /* Adjust for body margin/padding */
+      height: 85vh;
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      margin-left: 24px;
+      margin-right: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #ddd;
+    }
+    svg {
+      background: #fff;
+      border-radius: 8px;
+      display: block; /* Important for D3 */
+    }
+    .node circle {
+      stroke-width: 2.5px;
+    }
+    .node text { /* Base style for the <text> container */
+      font: 13px 'Segoe UI', sans-serif;
+      paint-order: stroke fill; /* Ensures text is readable over lines */
+      stroke: #fff; /* White halo */
+      stroke-width: 3px; /* Halo thickness */
+      stroke-linejoin: round;
+      stroke-opacity: 0.85; /* Halo opacity */
+    }
+    .link {
+      fill: none;
+      stroke-opacity: 0.7;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>/ — Knowledge Graph</h1>
+  <div class="controls">
+    <button onclick="expandAll()">Expand All</button>
+    <button onclick="collapseAll()">Collapse All</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+  <div id="tree-container">
+    <svg id="tree-svg" width="6000" height="8000"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const initialJsonData = {"name":"/","total_count":485,"children":[{"name":"api","total_count":36,"children":[{"name":"routers","total_count":35,"children":[{"name":"analytics.py","total_count":6,"children":[{"name":"Analytics Router — 11 Analytical Tools","total_count":1,"children":[]},{"name":"Execute an analytical tool and return the formatted text result.","total_count":1,"children":[]},{"name":"List all available analytical tools with their descriptions and topics.","total_count":1,"children":[]},{"name":"list_tools()","total_count":1,"children":[]},{"name":"run_tool()","total_count":1,"children":[]},{"name":"RunToolRequest","total_count":1,"children":[]}]},{"name":"chat.py","total_count":7,"children":[{"name":"Chat Router — AI Consultant Endpoint Wires consult_logic_advanced() into a REST","total_count":1,"children":[]},{"name":"chat()","total_count":1,"children":[]},{"name":"chat_health()","total_count":1,"children":[]},{"name":"ChatRequest","total_count":1,"children":[]},{"name":"ChatResponse","total_count":1,"children":[]},{"name":"Check if the AI consultant backend is ready.","total_count":1,"children":[]},{"name":"Send a message to the AI Business Consultant (LangGraph multi-agent).     Retur","total_count":1,"children":[]}]},{"name":"churn.py","total_count":7,"children":[{"name":"Churn Router — Segment Risk & Model Comparison","total_count":1,"children":[]},{"name":"get_churn_segments()","total_count":1,"children":[]},{"name":"get_error_analysis()","total_count":1,"children":[]},{"name":"get_model_comparison()","total_count":1,"children":[]},{"name":"Return DNN vs baseline model comparison from evaluation data.","total_count":1,"children":[]},{"name":"Return FP/FN feature profiles for model reliability assessment.","total_count":1,"children":[]},{"name":"Return per-segment churn rates and model AUC from evaluation data.","total_count":1,"children":[]}]},{"name":"dashboard.py","total_count":8,"children":[{"name":"_get_kpi_engine()","total_count":1,"children":[]},{"name":"_read_env_key()","total_count":1,"children":[]},{"name":"Dashboard Router — KPI Endpoints Calls the deterministic KPIEngine for all core","total_count":1,"children":[]},{"name":"get_all_kpis()","total_count":1,"children":[]},{"name":"Health check — verify DB and model files are accessible.","total_count":1,"children":[]},{"name":"Lazy-load KPIEngine to avoid import errors at startup.","total_count":1,"children":[]},{"name":"Return all core KPI values for the dashboard summary cards.","total_count":1,"children":[]},{"name":"system_status()","total_count":1,"children":[]}]},{"name":"forecasting.py","total_count":6,"children":[{"name":"_build_summary()","total_count":1,"children":[]},{"name":"Forecasting Router — Prophet Forecast & Metrics","total_count":1,"children":[]},{"name":"get_forecast()","total_count":1,"children":[]},{"name":"get_forecast_metrics()","total_count":1,"children":[]},{"name":"Return forecast data points for charting.     Tries live Prophet model first, f","total_count":1,"children":[]},{"name":"Return Prophet cross-validation performance metrics.","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"DATABASE.md","total_count":16,"children":[{"name":"**A. Operational Schema (Inventory Management)**","total_count":1,"children":[]},{"name":"**A. Vector Database (ChromaDB)**","total_count":1,"children":[]},{"name":"**B. Historical Analytics Schema (Olist Marketplace)**","total_count":1,"children":[]},{"name":"**B. Long-Term Analytical Memory (PostgreSQL)**","total_count":1,"children":[]},{"name":"**Node.js (Prisma)**","total_count":1,"children":[]},{"name":"**Olist SQLite (`olist.db`)**","total_count":1,"children":[]},{"name":"**Python (SQLAlchemy)**","total_count":1,"children":[]},{"name":"1. Primary Store: PostgreSQL (`bisft_inventory`)","total_count":1,"children":[]},{"name":"2. AI Intelligence Storage","total_count":1,"children":[]},{"name":"3. Legacy / Development Storage","total_count":1,"children":[]},{"name":"4. Connection Configuration","total_count":1,"children":[]},{"name":"5. Entity-Relationship Highlights","total_count":1,"children":[]},{"name":"6. Maintenance Commands","total_count":1,"children":[]},{"name":"BISFT Database Architecture","total_count":1,"children":[]},{"name":"code:yaml (database:)","total_count":1,"children":[]},{"name":"DATABASE.md","total_count":1,"children":[]}]},{"name":"docs","total_count":53,"children":[{"name":"inventory-backend-plan.md","total_count":53,"children":[{"name":"1. Current Backend Architecture","total_count":1,"children":[]},{"name":"10. Transaction Management Strategy","total_count":1,"children":[]},{"name":"11. Validation & Security Approach","total_count":1,"children":[]},{"name":"12. Scalability Considerations","total_count":1,"children":[]},{"name":"13. Frontend Integration Guide","total_count":1,"children":[]},{"name":"14. Data Seeding Strategy","total_count":1,"children":[]},{"name":"15. Implementation Order","total_count":1,"children":[]},{"name":"2. Existing Database Schema (Olist SQLite)","total_count":1,"children":[]},{"name":"2a. Tables & Row Counts","total_count":1,"children":[]},{"name":"2b. Product Table Schema","total_count":1,"children":[]},{"name":"2c. Seller Table Schema","total_count":1,"children":[]},{"name":"2d. Order Items Schema (Product-Seller-Price relationship)","total_count":1,"children":[]},{"name":"3. Critical Data Relationships","total_count":1,"children":[]},{"name":"4. What's Missing for Inventory Management","total_count":1,"children":[]},{"name":"5. Architecture Decision: Why a Separate Node.js/PostgreSQL Backend","total_count":1,"children":[]},{"name":"6. Recommended Modules & Services","total_count":1,"children":[]},{"name":"7. Database Design (PostgreSQL + Prisma)","total_count":1,"children":[]},{"name":"7a. Entity Relationship Diagram","total_count":1,"children":[]},{"name":"7b. Table Designs","total_count":1,"children":[]},{"name":"8. Feature Justification Based on Current Data","total_count":1,"children":[]},{"name":"9. API Structure","total_count":1,"children":[]},{"name":"Auth","total_count":1,"children":[]},{"name":"Categories","total_count":1,"children":[]},{"name":"code:block1 (products)","total_count":1,"children":[]},{"name":"code:block18 (BEGIN TRANSACTION)","total_count":1,"children":[]},{"name":"code:block19 (BEGIN TRANSACTION)","total_count":1,"children":[]},{"name":"code:block2 (sellers)","total_count":1,"children":[]},{"name":"code:block20 (BEGIN TRANSACTION)","total_count":1,"children":[]},{"name":"code:block21 (Frontend (React/Next.js))","total_count":1,"children":[]},{"name":"code:block3 (order_items)","total_count":1,"children":[]},{"name":"code:block4 (products ──(1:N)──► order_items ◄──(N:1)── sellers)","total_count":1,"children":[]},{"name":"code:block5 (created (5) → approved (2) → invoiced (314) → processing (30)","total_count":1,"children":[]},{"name":"code:block6 (┌─────────────────────────────────────────────────────────┐)","total_count":1,"children":[]},{"name":"code:block7 (inventory-backend/)","total_count":1,"children":[]},{"name":"code:json ({)","total_count":1,"children":[]},{"name":"code:json ({)","total_count":1,"children":[]},{"name":"code:mermaid (erDiagram)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK DEFAULT gen_random_uuid())","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"code:sql (id              UUID        PK)","total_count":1,"children":[]},{"name":"Inventory","total_count":1,"children":[]},{"name":"Inventory Management Backend — Technical Analysis & Architecture Plan","total_count":1,"children":[]},{"name":"inventory-backend-plan.md","total_count":1,"children":[]},{"name":"PHASE 1: PROJECT ANALYSIS","total_count":1,"children":[]},{"name":"Products","total_count":1,"children":[]},{"name":"Purchase Orders","total_count":1,"children":[]},{"name":"Suppliers","total_count":1,"children":[]}]}]},{"name":"frontend","total_count":38,"children":[{"name":"src","total_count":37,"children":[{"name":"api","total_count":4,"children":[{"name":"client.js","total_count":4,"children":[{"name":"api","total_count":1,"children":[]},{"name":"interceptors","total_count":1,"children":[]},{"name":"inventoryApi","total_count":1,"children":[]},{"name":"token","total_count":1,"children":[]}]}]},{"name":"App.jsx","total_count":1,"children":[{"name":"ProtectedRoute()","total_count":1,"children":[]}]},{"name":"components","total_count":5,"children":[{"name":"LoadingSpinner.jsx","total_count":1,"children":[{"name":"LoadingSpinner()","total_count":1,"children":[]}]},{"name":"PageHeader.jsx","total_count":1,"children":[{"name":"PageHeader()","total_count":1,"children":[]}]},{"name":"Sidebar.jsx","total_count":3,"children":[{"name":"NAV_ITEMS","total_count":1,"children":[]},{"name":"OPS_ITEMS","total_count":1,"children":[]},{"name":"Sidebar()","total_count":1,"children":[]}]}]},{"name":"context","total_count":3,"children":[{"name":"AuthContext.jsx","total_count":3,"children":[{"name":"AuthContext","total_count":1,"children":[]},{"name":"AuthProvider()","total_count":1,"children":[]},{"name":"useAuth()","total_count":1,"children":[]}]}]},{"name":"pages","total_count":23,"children":[{"name":"Analytics.jsx","total_count":2,"children":[{"name":"Analytics()","total_count":1,"children":[]},{"name":"TOPIC_OPTIONS","total_count":1,"children":[]}]},{"name":"Chat.jsx","total_count":4,"children":[{"name":"Chat()","total_count":1,"children":[]},{"name":"formatTime()","total_count":1,"children":[]},{"name":"SUGGESTIONS","total_count":1,"children":[]},{"name":"WELCOME_MSG","total_count":1,"children":[]}]},{"name":"Churn.jsx","total_count":4,"children":[{"name":"Churn()","total_count":1,"children":[]},{"name":"CustomTooltip()","total_count":1,"children":[]},{"name":"getRiskLevel()","total_count":1,"children":[]},{"name":"SEGMENT_COLOR","total_count":1,"children":[]}]},{"name":"Dashboard.jsx","total_count":5,"children":[{"name":"CustomTooltip()","total_count":1,"children":[]},{"name":"Dashboard()","total_count":1,"children":[]},{"name":"GEO_COLORS","total_count":1,"children":[]},{"name":"KPI_CONFIG","total_count":1,"children":[]},{"name":"KPICard()","total_count":1,"children":[]}]},{"name":"Forecasting.jsx","total_count":3,"children":[{"name":"CustomTooltip()","total_count":1,"children":[]},{"name":"DAYS_OPTIONS","total_count":1,"children":[]},{"name":"Forecasting()","total_count":1,"children":[]}]},{"name":"Inventory.jsx","total_count":1,"children":[{"name":"Inventory()","total_count":1,"children":[]}]},{"name":"Login.jsx","total_count":1,"children":[{"name":"Login()","total_count":1,"children":[]}]},{"name":"PurchaseOrders.jsx","total_count":2,"children":[{"name":"PurchaseOrders()","total_count":1,"children":[]},{"name":"STATUS_BADGE","total_count":1,"children":[]}]},{"name":"Suppliers.jsx","total_count":1,"children":[{"name":"Suppliers()","total_count":1,"children":[]}]}]},{"name":"main.jsx","total_count":1,"children":[]}]},{"name":"vite.config.js","total_count":1,"children":[]}]},{"name":"graphify-out","total_count":2,"children":[{"name":"converted","total_count":2,"children":[{"name":"online_retail_d3485cd8.md","total_count":2,"children":[{"name":"online_retail_d3485cd8.md","total_count":1,"children":[]},{"name":"Sheet: Online Retail","total_count":1,"children":[]}]}]}]},{"name":"inventory-backend","total_count":129,"children":[{"name":"check-db.js","total_count":3,"children":[{"name":"check()","total_count":1,"children":[]},{"name":"prisma","total_count":1,"children":[]},{"name":"{ PrismaClient }","total_count":1,"children":[]}]},{"name":"src","total_count":126,"children":[{"name":"app.ts","total_count":2,"children":[{"name":"app","total_count":1,"children":[]},{"name":"limiter","total_count":1,"children":[]}]},{"name":"config","total_count":4,"children":[{"name":"constants.ts","total_count":2,"children":[{"name":"PAGINATION","total_count":1,"children":[]},{"name":"STOCK_REASONS","total_count":1,"children":[]}]},{"name":"database.ts","total_count":1,"children":[{"name":"prisma","total_count":1,"children":[]}]},{"name":"env.ts","total_count":1,"children":[{"name":"env","total_count":1,"children":[]}]}]},{"name":"middleware","total_count":8,"children":[{"name":"audit.middleware.ts","total_count":1,"children":[{"name":"auditLog()","total_count":1,"children":[]}]},{"name":"auth.middleware.ts","total_count":4,"children":[{"name":"authenticate()","total_count":1,"children":[]},{"name":"authorize()","total_count":1,"children":[]},{"name":"AuthPayload","total_count":1,"children":[]},{"name":"Request","total_count":1,"children":[]}]},{"name":"error.middleware.ts","total_count":1,"children":[{"name":"errorHandler()","total_count":1,"children":[]}]},{"name":"validate.middleware.ts","total_count":2,"children":[{"name":"validate()","total_count":1,"children":[]},{"name":"validateQuery()","total_count":1,"children":[]}]}]},{"name":"modules","total_count":79,"children":[{"name":"audit-logs","total_count":3,"children":[{"name":"audit-log.routes.ts","total_count":3,"children":[{"name":"router","total_count":1,"children":[]},{"name":"where","total_count":1,"children":[]},{"name":"{ page, limit }","total_count":1,"children":[]}]}]},{"name":"auth","total_count":10,"children":[{"name":"auth.routes.ts","total_count":1,"children":[{"name":"router","total_count":1,"children":[]}]},{"name":"auth.schema.ts","total_count":4,"children":[{"name":"LoginInput","total_count":1,"children":[]},{"name":"loginSchema","total_count":1,"children":[]},{"name":"RegisterInput","total_count":1,"children":[]},{"name":"registerSchema","total_count":1,"children":[]}]},{"name":"auth.service.ts","total_count":5,"children":[{"name":".getProfile()","total_count":1,"children":[]},{"name":".login()","total_count":1,"children":[]},{"name":".refreshToken()","total_count":1,"children":[]},{"name":".register()","total_count":1,"children":[]},{"name":"AuthService","total_count":1,"children":[]}]}]},{"name":"categories","total_count":11,"children":[{"name":"category.routes.ts","total_count":1,"children":[{"name":"router","total_count":1,"children":[]}]},{"name":"category.schema.ts","total_count":4,"children":[{"name":"CreateCategoryInput","total_count":1,"children":[]},{"name":"createCategorySchema","total_count":1,"children":[]},{"name":"UpdateCategoryInput","total_count":1,"children":[]},{"name":"updateCategorySchema","total_count":1,"children":[]}]},{"name":"category.service.ts","total_count":6,"children":[{"name":".create()","total_count":1,"children":[]},{"name":".findAll()","total_count":1,"children":[]},{"name":".findById()","total_count":1,"children":[]},{"name":".softDelete()","total_count":1,"children":[]},{"name":".update()","total_count":1,"children":[]},{"name":"CategoryService","total_count":1,"children":[]}]}]},{"name":"inventory","total_count":15,"children":[{"name":"inventory.routes.ts","total_count":1,"children":[{"name":"router","total_count":1,"children":[]}]},{"name":"inventory.schema.ts","total_count":6,"children":[{"name":"AddStockInput","total_count":1,"children":[]},{"name":"addStockSchema","total_count":1,"children":[]},{"name":"AdjustStockInput","total_count":1,"children":[]},{"name":"adjustStockSchema","total_count":1,"children":[]},{"name":"RemoveStockInput","total_count":1,"children":[]},{"name":"removeStockSchema","total_count":1,"children":[]}]},{"name":"inventory.service.ts","total_count":8,"children":[{"name":".addStock()","total_count":1,"children":[]},{"name":".adjustStock()","total_count":1,"children":[]},{"name":".findAll()","total_count":1,"children":[]},{"name":".findByProductId()","total_count":1,"children":[]},{"name":".getLowStockAlerts()","total_count":1,"children":[]},{"name":".getMovements()","total_count":1,"children":[]},{"name":".removeStock()","total_count":1,"children":[]},{"name":"InventoryService","total_count":1,"children":[]}]}]},{"name":"products","total_count":15,"children":[{"name":"product.routes.ts","total_count":1,"children":[{"name":"router","total_count":1,"children":[]}]},{"name":"product.schema.ts","total_count":6,"children":[{"name":"CreateProductInput","total_count":1,"children":[]},{"name":"createProductSchema","total_count":1,"children":[]},{"name":"productQuerySchema","total_count":1,"children":[]},{"name":"UpdateProductInput","total_count":1,"children":[]},{"name":"updateProductSchema","total_count":1,"children":[]},{"name":"updateStatusSchema","total_count":1,"children":[]}]},{"name":"product.service.ts","total_count":8,"children":[{"name":".create()","total_count":1,"children":[]},{"name":".findAll()","total_count":1,"children":[]},{"name":".findById()","total_count":1,"children":[]},{"name":".findLowStock()","total_count":1,"children":[]},{"name":".update()","total_count":1,"children":[]},{"name":".updateStatus()","total_count":1,"children":[]},{"name":"ProductQuery","total_count":1,"children":[]},{"name":"ProductService","total_count":1,"children":[]}]}]},{"name":"purchase-orders","total_count":14,"children":[{"name":"purchase-order.routes.ts","total_count":1,"children":[{"name":"router","total_count":1,"children":[]}]},{"name":"purchase-order.schema.ts","total_count":6,"children":[{"name":"CreatePOInput","total_count":1,"children":[]},{"name":"createPurchaseOrderSchema","total_count":1,"children":[]},{"name":"poItemSchema","total_count":1,"children":[]},{"name":"ReceivePOInput","total_count":1,"children":[]},{"name":"receivePOSchema","total_count":1,"children":[]},{"name":"updatePOStatusSchema","total_count":1,"children":[]}]},{"name":"purchase-order.service.ts","total_count":7,"children":[{"name":".create()","total_count":1,"children":[]},{"name":".findAll()","total_count":1,"children":[]},{"name":".findById()","total_count":1,"children":[]},{"name":".generatePONumber()","total_count":1,"children":[]},{"name":".receive()","total_count":1,"children":[]},{"name":".updateStatus()","total_count":1,"children":[]},{"name":"PurchaseOrderService","total_count":1,"children":[]}]}]},{"name":"suppliers","total_count":11,"children":[{"name":"supplier.routes.ts","total_count":1,"children":[{"name":"router","total_count":1,"children":[]}]},{"name":"supplier.schema.ts","total_count":4,"children":[{"name":"CreateSupplierInput","total_count":1,"children":[]},{"name":"createSupplierSchema","total_count":1,"children":[]},{"name":"UpdateSupplierInput","total_count":1,"children":[]},{"name":"updateSupplierSchema","total_count":1,"children":[]}]},{"name":"supplier.service.ts","total_count":6,"children":[{"name":".create()","total_count":1,"children":[]},{"name":".deactivate()","total_count":1,"children":[]},{"name":".findAll()","total_count":1,"children":[]},{"name":".findById()","total_count":1,"children":[]},{"name":".update()","total_count":1,"children":[]},{"name":"SupplierService","total_count":1,"children":[]}]}]}]},{"name":"seed","total_count":11,"children":[{"name":"restore-real-products.js","total_count":5,"children":[{"name":"fs","total_count":1,"children":[]},{"name":"path","total_count":1,"children":[]},{"name":"prisma","total_count":1,"children":[]},{"name":"restoreOperationalData()","total_count":1,"children":[]},{"name":"{ PrismaClient }","total_count":1,"children":[]}]},{"name":"seed-from-olist.ts","total_count":6,"children":[{"name":"batchInsert()","total_count":1,"children":[]},{"name":"generateSKU()","total_count":1,"children":[]},{"name":"OLIST_DB_PATH","total_count":1,"children":[]},{"name":"prisma","total_count":1,"children":[]},{"name":"seed()","total_count":1,"children":[]},{"name":"slugify()","total_count":1,"children":[]}]}]},{"name":"server.ts","total_count":1,"children":[{"name":"main()","total_count":1,"children":[]}]},{"name":"shared","total_count":21,"children":[{"name":"errors","total_count":14,"children":[{"name":"AppError.ts","total_count":14,"children":[{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":"AppError","total_count":1,"children":[]},{"name":"ConflictError","total_count":1,"children":[]},{"name":"ForbiddenError","total_count":1,"children":[]},{"name":"InsufficientStockError","total_count":1,"children":[]},{"name":"NotFoundError","total_count":1,"children":[]},{"name":"UnauthorizedError","total_count":1,"children":[]},{"name":"ValidationError","total_count":1,"children":[]}]}]},{"name":"utils","total_count":7,"children":[{"name":"response.ts","total_count":7,"children":[{"name":"paginatedResponse()","total_count":1,"children":[]},{"name":"PaginatedResult","total_count":1,"children":[]},{"name":"PaginationParams","total_count":1,"children":[]},{"name":"parsePagination()","total_count":1,"children":[]},{"name":"sendPaginated()","total_count":1,"children":[]},{"name":"sendSuccess()","total_count":1,"children":[]},{"name":"successResponse()","total_count":1,"children":[]}]}]}]}]}]},{"name":"main.py","total_count":2,"children":[{"name":"BISFT — Business Insights & Sales Forecasting Tool FastAPI Backend — Main Entry","total_count":1,"children":[]},{"name":"root()","total_count":1,"children":[]}]},{"name":"memory.md","total_count":36,"children":[{"name":"1. PROJECT OVERVIEW","total_count":1,"children":[]},{"name":"10. ENVIRONMENT","total_count":1,"children":[]},{"name":"11. WHAT HAS BEEN DONE (COMPLETED WORK)","total_count":1,"children":[]},{"name":"12. WHAT REMAINS (TODO / NEXT STEPS)","total_count":1,"children":[]},{"name":"13. CRITICAL BUSINESS RULES (FOR ANY AI MODIFYING CODE)","total_count":1,"children":[]},{"name":"2. TECHNOLOGY STACK","total_count":1,"children":[]},{"name":"3. PROJECT STRUCTURE (ACTUAL)","total_count":1,"children":[]},{"name":"4. DATA PIPELINE","total_count":1,"children":[]},{"name":"4a. Online Retail Dataset","total_count":1,"children":[]},{"name":"4b. Olist Dataset","total_count":1,"children":[]},{"name":"5. CHURN PREDICTION MODULE (✅ COMPLETE)","total_count":1,"children":[]},{"name":"5a. Feature Engineering (`src/features/churn_features.py`)","total_count":1,"children":[]},{"name":"5b. Model Architecture (`src/models/churn_model.py`)","total_count":1,"children":[]},{"name":"5c. Training (`src/training/train_churn.py`)","total_count":1,"children":[]},{"name":"5d. Evaluation (`src/evaluation/evaluate_churn.py`)","total_count":1,"children":[]},{"name":"6. FORECASTING MODULE (✅ COMPLETE)","total_count":1,"children":[]},{"name":"6a. Prophet (`src/forecasting/prophet_model.py`)","total_count":1,"children":[]},{"name":"6b. LSTM (`src/models/lstm_forecaster.py`)","total_count":1,"children":[]},{"name":"7. AGENTIC RAG CHATBOT (✅ COMPLETE — THE MAIN SYSTEM)","total_count":1,"children":[]},{"name":"7a. Architecture (`src/chatbot/consultant_agent.py`)","total_count":1,"children":[]},{"name":"7b. Business Toolkit (`src/chatbot/business_toolkit.py`)","total_count":1,"children":[]},{"name":"7c. KPI Engine (`src/analytics/kpi_engine.py`)","total_count":1,"children":[]},{"name":"7d. Analytical Tools (`src/analytics/analytical_tools.py`)","total_count":1,"children":[]},{"name":"7e. Knowledge Base (`src/chatbot/ingest_knowledge.py`)","total_count":1,"children":[]},{"name":"7f. Long-Term Memory (`src/chatbot/memory_store.py`)","total_count":1,"children":[]},{"name":"7g. SQL Safety","total_count":1,"children":[]},{"name":"8. API LAYER (`main.py`)","total_count":1,"children":[]},{"name":"9. KEY CONFIGURATION (`config/config.yaml`)","total_count":1,"children":[]},{"name":"BISFT — Project Memory","total_count":1,"children":[]},{"name":"Business Insights & Sales Forecasting Tool","total_count":1,"children":[]},{"name":"code:block1 (BISFT/)","total_count":1,"children":[]},{"name":"code:block2 (START → Router)","total_count":1,"children":[]},{"name":"code:python (messages: list          # Conversation history (HumanMessage)","total_count":1,"children":[]},{"name":"code:yaml (paths:)","total_count":1,"children":[]},{"name":"Core Modules","total_count":1,"children":[]},{"name":"memory.md","total_count":1,"children":[]}]},{"name":"README.md","total_count":14,"children":[{"name":"AI-Powered Decision Intelligence Platform","total_count":1,"children":[]},{"name":"Business Insights & Sales Forecasting Tool","total_count":1,"children":[]},{"name":"code:bash (# 1. Create virtual environment)","total_count":1,"children":[]},{"name":"code:block1 (BISFT/)","total_count":1,"children":[]},{"name":"Contributors","total_count":1,"children":[]},{"name":"Dataset Strategy","total_count":1,"children":[]},{"name":"GitHub Repository","total_count":1,"children":[]},{"name":"License","total_count":1,"children":[]},{"name":"Overview","total_count":1,"children":[]},{"name":"Project Status & Roadmap","total_count":1,"children":[]},{"name":"Project Structure","total_count":1,"children":[]},{"name":"Quick Start","total_count":1,"children":[]},{"name":"README.md","total_count":1,"children":[]},{"name":"Technologies","total_count":1,"children":[]}]},{"name":"run_pipeline.py","total_count":2,"children":[{"name":"main()","total_count":1,"children":[]},{"name":"run_step()","total_count":1,"children":[]}]},{"name":"scratch","total_count":1,"children":[{"name":"check_db.py","total_count":1,"children":[]}]},{"name":"scripts","total_count":7,"children":[{"name":"data_cleaning.py","total_count":7,"children":[{"name":"clean_olist()","total_count":1,"children":[]},{"name":"clean_online_retail()","total_count":1,"children":[]},{"name":"Load all Olist CSV files into a dictionary of DataFrames.","total_count":1,"children":[]},{"name":"Load and clean the Online Retail (.xlsx) dataset.","total_count":1,"children":[]},{"name":"load_olist()","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"Merge and clean the Olist dataset.","total_count":1,"children":[]}]}]},{"name":"src","total_count":149,"children":[{"name":"analytics","total_count":32,"children":[{"name":"analytical_tools.py","total_count":24,"children":[{"name":"_conn()","total_count":1,"children":[]},{"name":"Analytical Intelligence Layer ============================== Deterministic ana","total_count":1,"children":[]},{"name":"Analyze cancellation rates and potential revenue loss.","total_count":1,"children":[]},{"name":"analyze_category_performance()","total_count":1,"children":[]},{"name":"analyze_customer_behavior()","total_count":1,"children":[]},{"name":"analyze_delivery_performance()","total_count":1,"children":[]},{"name":"analyze_geographic_distribution()","total_count":1,"children":[]},{"name":"analyze_market_basket()","total_count":1,"children":[]},{"name":"analyze_order_cancellation()","total_count":1,"children":[]},{"name":"analyze_revenue_trends()","total_count":1,"children":[]},{"name":"analyze_review_scores()","total_count":1,"children":[]},{"name":"analyze_seller_performance()","total_count":1,"children":[]},{"name":"Delivery delays, on-time rates, and avg delivery time by month.","total_count":1,"children":[]},{"name":"Estimate historical CLV based on total spend and order frequency.","total_count":1,"children":[]},{"name":"estimate_clv_by_segment()","total_count":1,"children":[]},{"name":"Identify top product category pairs frequently bought together in the same order","total_count":1,"children":[]},{"name":"investigate_root_causes()","total_count":1,"children":[]},{"name":"Monthly revenue trends with MoM growth rates.","total_count":1,"children":[]},{"name":"Repeat purchase rates, new vs returning customers, cohort trends.","total_count":1,"children":[]},{"name":"Revenue and order distribution by state.","total_count":1,"children":[]},{"name":"Review score distribution and trends by month.","total_count":1,"children":[]},{"name":"Run multiple analyses and aggregate findings for root-cause investigation.","total_count":1,"children":[]},{"name":"Seller distribution, top sellers, and delivery impact.","total_count":1,"children":[]},{"name":"Top and bottom product categories by revenue and growth.","total_count":1,"children":[]}]},{"name":"kpi_engine.py","total_count":8,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":"._get_connection()","total_count":1,"children":[]},{"name":".calculate_kpi()","total_count":1,"children":[]},{"name":".get_all_kpis_summary()","total_count":1,"children":[]},{"name":"Calculate a specific KPI by its ID from the registry.","total_count":1,"children":[]},{"name":"Central engine for calculating deterministic business KPIs.     Ensures that Da","total_count":1,"children":[]},{"name":"KPIEngine","total_count":1,"children":[]},{"name":"Returns a dictionary of all core KPI values for a dashboard summary.","total_count":1,"children":[]}]}]},{"name":"chatbot","total_count":64,"children":[{"name":"business_toolkit.py","total_count":24,"children":[{"name":"_get_vector_collection()","total_count":1,"children":[]},{"name":"async_cache()","total_count":1,"children":[]},{"name":"Backward-compatible overview combining segment risks and key insight.","total_count":1,"children":[]},{"name":"Decorator to cache the results of async functions using diskcache.","total_count":1,"children":[]},{"name":"Execute a pre-approved, deterministic business KPI from the official registry.","total_count":1,"children":[]},{"name":"Execute a SQL query against the unified PostgreSQL database and return results a","total_count":1,"children":[]},{"name":"execute_deterministic_kpi()","total_count":1,"children":[]},{"name":"Generate a real sales revenue forecast for the next N days using the trained","total_count":1,"children":[]},{"name":"get_churn_error_analysis()","total_count":1,"children":[]},{"name":"get_churn_risk_by_segment()","total_count":1,"children":[]},{"name":"get_churn_risk_overview()","total_count":1,"children":[]},{"name":"get_forecast_metrics()","total_count":1,"children":[]},{"name":"get_kpi_definition()","total_count":1,"children":[]},{"name":"get_model_registry()","total_count":1,"children":[]},{"name":"get_sales_forecast_summary()","total_count":1,"children":[]},{"name":"Perform semantic similarity search across the ChromaDB vector store.     Return","total_count":1,"children":[]},{"name":"query_database()","total_count":1,"children":[]},{"name":"Retrieve KPI business definitions and deterministic values.     If kpi_name is","total_count":1,"children":[]},{"name":"Retrieve model metadata from the model registry.     If model_name is provided","total_count":1,"children":[]},{"name":"Return ChromaDB collection, initializing client on first use.","total_count":1,"children":[]},{"name":"Return real churn risk rates per customer segment from the DNN model's     eval","total_count":1,"children":[]},{"name":"Return the Prophet model's evaluation metrics (RMSE, MAE, MAPE, coverage)     f","total_count":1,"children":[]},{"name":"Return which features most strongly drive False Positives and False Negatives","total_count":1,"children":[]},{"name":"search_business_knowledge()","total_count":1,"children":[]}]},{"name":"consultant_agent.py","total_count":21,"children":[{"name":"Agentic RAG Business Intelligence System =======================================","total_count":1,"children":[]},{"name":"AgentState","total_count":1,"children":[]},{"name":"Classifies: SIMPLE (single-tool), ANALYTICAL (multi-step), or OTHER.","total_count":1,"children":[]},{"name":"consult_logic_advanced()","total_count":1,"children":[]},{"name":"data_gatherer_node()","total_count":1,"children":[]},{"name":"Decomposes complex questions into a multi-step investigation plan.","total_count":1,"children":[]},{"name":"Execute all planned steps and aggregate results.","total_count":1,"children":[]},{"name":"Generate natural, context-aware responses for non-analytical queries.","total_count":1,"children":[]},{"name":"greeting_node()","total_count":1,"children":[]},{"name":"Handle simple single-tool questions: KPI, forecast, churn, or SQL.","total_count":1,"children":[]},{"name":"Main entry point for the agentic BI system.","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"memory_node()","total_count":1,"children":[]},{"name":"planner_node()","total_count":1,"children":[]},{"name":"Produce consultant-grade analysis from all gathered evidence.","total_count":1,"children":[]},{"name":"rag_node()","total_count":1,"children":[]},{"name":"Retrieve business knowledge and strategy docs via vector search.","total_count":1,"children":[]},{"name":"Retrieve relevant past findings and conversation context.","total_count":1,"children":[]},{"name":"router_node()","total_count":1,"children":[]},{"name":"simple_executor_node()","total_count":1,"children":[]},{"name":"synthesizer_node()","total_count":1,"children":[]}]},{"name":"ingest_knowledge.py","total_count":4,"children":[{"name":"build_documents()","total_count":1,"children":[]},{"name":"Convert all structured business knowledge into searchable text chunks.","total_count":1,"children":[]},{"name":"ingest()","total_count":1,"children":[]},{"name":"Knowledge Ingestion Pipeline for Enterprise RAG ================================","total_count":1,"children":[]}]},{"name":"memory_store.py","total_count":15,"children":[{"name":".__init__()","total_count":1,"children":[]},{"name":"._init_db()","total_count":1,"children":[]},{"name":".get_all_topics()","total_count":1,"children":[]},{"name":".recall_conversation_context()","total_count":1,"children":[]},{"name":".recall_findings()","total_count":1,"children":[]},{"name":".store_conversation_summary()","total_count":1,"children":[]},{"name":".store_finding()","total_count":1,"children":[]},{"name":"Get recent conversation summaries for a thread.","total_count":1,"children":[]},{"name":"Long-Term Analytical Memory Store ================================== PostgreSQ","total_count":1,"children":[]},{"name":"MemoryStore","total_count":1,"children":[]},{"name":"Persistent memory for analytical findings and conversation context.","total_count":1,"children":[]},{"name":"Retrieve past findings, optionally filtered by topic.","total_count":1,"children":[]},{"name":"Return all distinct topics from findings.","total_count":1,"children":[]},{"name":"Store a conversation summary for long-term recall.","total_count":1,"children":[]},{"name":"Store an analytical finding for future recall.","total_count":1,"children":[]}]}]},{"name":"evaluation","total_count":15,"children":[{"name":"evaluate_churn.py","total_count":14,"children":[{"name":"bias_check()","total_count":1,"children":[]},{"name":"Compute per-segment performance to detect model bias.     Segment column is the","total_count":1,"children":[]},{"name":"compute_metrics()","total_count":1,"children":[]},{"name":"error_analysis()","total_count":1,"children":[]},{"name":"evaluate_churn.py ================= Business Insights & Sales Forecasting Tool","total_count":1,"children":[]},{"name":"Identify the most confidently wrong predictions.","total_count":1,"children":[]},{"name":"load_dnn()","total_count":1,"children":[]},{"name":"load_test_data()","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"Plot Precision-Recall curves for multiple models.","total_count":1,"children":[]},{"name":"Plot ROC curves for multiple models on one figure.","total_count":1,"children":[]},{"name":"plot_confusion_matrix()","total_count":1,"children":[]},{"name":"plot_pr_curve()","total_count":1,"children":[]},{"name":"plot_roc_curve()","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"features","total_count":5,"children":[{"name":"churn_features.py","total_count":4,"children":[{"name":"build_churn_features()","total_count":1,"children":[]},{"name":"churn_features.py ================= Business Insights & Sales Forecasting Tool","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"Return a customer-level DataFrame with RFM + engineered features and churn label","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"forecasting","total_count":4,"children":[{"name":"feature_engineering.py","total_count":2,"children":[{"name":"engineer_features()","total_count":1,"children":[]},{"name":"load_config()","total_count":1,"children":[]}]},{"name":"prophet_model.py","total_count":2,"children":[{"name":"load_config()","total_count":1,"children":[]},{"name":"train_prophet()","total_count":1,"children":[]}]}]},{"name":"models","total_count":14,"children":[{"name":"churn_model.py","total_count":5,"children":[{"name":"Build and compile the Customer Churn DNN.      Parameters     ----------","total_count":1,"children":[]},{"name":"build_churn_model()","total_count":1,"children":[]},{"name":"churn_model.py ============== Business Insights & Sales Forecasting Tool Phas","total_count":1,"children":[]},{"name":"get_baseline_models()","total_count":1,"children":[]},{"name":"Return a dictionary of baseline Scikit-learn classifiers for comparison.     Th","total_count":1,"children":[]}]},{"name":"lstm_forecaster.py","total_count":8,"children":[{"name":"Aggregate transaction data into daily multivariate time series.","total_count":1,"children":[]},{"name":"Build multivariate LSTM model.","total_count":1,"children":[]},{"name":"build_lstm_model()","total_count":1,"children":[]},{"name":"Create sliding windows for LSTM.     data: scaled numpy array     lookback: numb","total_count":1,"children":[]},{"name":"create_windows()","total_count":1,"children":[]},{"name":"lstm_forecaster.py ================== Business Insights & Sales Forecasting Tool","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"prepare_time_series_data()","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"training","total_count":11,"children":[{"name":"train_churn.py","total_count":10,"children":[{"name":"_plot_training_curves()","total_count":1,"children":[]},{"name":"apply_smote()","total_count":1,"children":[]},{"name":"hp_grid_search()","total_count":1,"children":[]},{"name":"load_and_preprocess()","total_count":1,"children":[]},{"name":"main()","total_count":1,"children":[]},{"name":"make_splits()","total_count":1,"children":[]},{"name":"Run a condensed HP grid and return results as a DataFrame.","total_count":1,"children":[]},{"name":"scale()","total_count":1,"children":[]},{"name":"train_churn.py ============== Business Insights & Sales Forecasting Tool Phas","total_count":1,"children":[]},{"name":"train_final_model()","total_count":1,"children":[]}]},{"name":"__init__.py","total_count":1,"children":[]}]},{"name":"utils","total_count":3,"children":[{"name":"preprocess_forecasting.py","total_count":2,"children":[{"name":"load_config()","total_count":1,"children":[]},{"name":"preprocess_for_forecasting()","total_count":1,"children":[]}]},{"name":"preprocess_olist.py","total_count":1,"children":[{"name":"preprocess_olist_to_sqlite()","total_count":1,"children":[]}]}]},{"name":"__init__.py","total_count":1,"children":[]}]}]};
+
+    function transformData(jsonData) {
+        // Helper function to recursively build the children structure
+        function processNode(node, parentL1StageName) {
+            let displayName = node.name;
+            // Append total_count if it exists and is not already in the name
+            if (node.total_count !== undefined) {
+                if (!/\(Total Count: \d+\)$/.test(displayName)) {
+                    displayName += ` (Total Count: ${node.total_count})`;
+                }
+            }
+
+            const newNode = { name: displayName };
+
+            if (parentL1StageName === "Root") {
+                 newNode.originalStageName = node.name;
+            } else {
+                newNode.originalStageName = parentL1StageName;
+            }
+
+            if (node.children && node.children.length > 0) {
+                const stageNameToPass = (parentL1StageName === "Root") ? node.name : parentL1StageName;
+                newNode.children = node.children.map(child => processNode(child, stageNameToPass));
+            }
+
+            return newNode;
+        }
+
+        let rootDisplayName = jsonData.name;
+        if (jsonData.total_count !== undefined && !/\(Total Count: \d+\)$/.test(rootDisplayName)) {
+            rootDisplayName += ` (Total Count: ${jsonData.total_count})`;
+        }
+
+        return {
+            name: rootDisplayName,
+            originalStageName: "Root",
+            children: (jsonData.children || []).map(child => processNode(child, "Root"))
+        };
+    }
+
+    const treeData = transformData(initialJsonData);
+
+    // Auto-populated phaseColors: every depth-1 child of the root gets
+    // a stable colour from a bigger palette so all top-level dirs are
+    // distinguishable.
+    const PALETTE = [
+      ["#3498DB","#2980B9","#AED6F1"], ["#2ECC71","#27AE60","#A9DFBF"],
+      ["#E74C3C","#C0392B","#F5B7B1"], ["#9B59B6","#8E44AD","#D7BDE2"],
+      ["#F39C12","#D68910","#FAD7A0"], ["#1ABC9C","#117864","#A2D9CE"],
+      ["#34495E","#1B2631","#ABB2B9"], ["#E67E22","#BA4A00","#F5CBA7"],
+      ["#16A085","#0E6655","#A2D9CE"], ["#D35400","#A04000","#EDBB99"],
+      ["#7F8C8D","#566573","#D5DBDB"], ["#C0392B","#7B241C","#F5B7B1"],
+      ["#2E86C1","#1B4F72","#A9CCE3"], ["#28B463","#196F3D","#A9DFBF"],
+      ["#AF7AC5","#6C3483","#D2B4DE"],
+    ];
+    const phaseColors = { "Root": { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+                          "Default": { fill: "#BDC3C7", stroke: "#95A5A6", collapsedFill: "#ECF0F1" } };
+    (initialJsonData.children || []).forEach((c, i) => {
+      const pal = PALETTE[i % PALETTE.length];
+      phaseColors[c.name] = { fill: pal[0], stroke: pal[1], collapsedFill: pal[2] };
+    });
+
+    const levelSpecificPalettes = {
+      0: { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+      2: { fill: "#6ab04c", stroke: "#508a38", collapsedFill: "#a3d391" },
+      3: { fill: "#f0932b", stroke: "#d0730f", collapsedFill: "#f6c07e" },
+      4: { fill: "#be2edd", stroke: "#a01cb3", collapsedFill: "#e08bf2" },
+      5: { fill: "#00a8ff", stroke: "#007ac1", collapsedFill: "#74d2ff" },
+      6: { fill: "#e55039", stroke: "#c23620", collapsedFill: "#f09a8d" },
+      default: { fill: "#747d8c", stroke: "#57606f", collapsedFill: "#a4b0be" }
+    };
+
+    const svgElement = d3.select("#tree-svg");
+    const initialSvgWidth = +svgElement.attr("width");
+    const initialSvgHeight = +svgElement.attr("height");
+    const margin = { top: 40, right: 120, bottom: 80, left: 450 };
+    let width = initialSvgWidth - margin.left - margin.right;
+    let height = initialSvgHeight - margin.top - margin.bottom;
+    const duration = 500;
+    let nodeCounter = 0;
+    const g = svgElement.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const treemap = d3.tree().nodeSize([40, 0]);
+    let rootNode = d3.hierarchy(treeData, d => d.children);
+    rootNode.x0 = 0;
+    rootNode.y0 = 0;
+
+    if (rootNode.children) {
+      rootNode.children.forEach(d_child => {
+        if (d_child.children) { collapseBranch(d_child); }
+      });
+    }
+    updateTree(rootNode);
+
+    function collapseBranch(d) { if (d.children) { d._children = d.children; d._children.forEach(collapseBranch); d.children = null; } }
+    function expandBranch(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) { d.children.forEach(expandBranch); } }
+    window.expandAll = () => { expandBranch(rootNode); updateTree(rootNode); };
+    window.collapseAll = () => { if (rootNode.children) { rootNode.children.forEach(collapseBranch); } updateTree(rootNode); };
+    window.resetView = () => { if (rootNode.children) { rootNode.children.forEach(d_child => { if (d_child.children || d_child._children) { collapseBranch(d_child); } }); } if (rootNode._children && !rootNode.children) { rootNode.children = rootNode._children; rootNode._children = null; } updateTree(rootNode); };
+
+    function updateTree(source) {
+      const treeLayoutData = treemap(rootNode);
+      let nodes = treeLayoutData.descendants();
+      let links = treeLayoutData.descendants().slice(1);
+
+      let minX = 0;
+      let maxX = 0;
+      if (nodes.length > 0) {
+        minX = d3.min(nodes, d => d.x);
+        maxX = d3.max(nodes, d => d.x);
+      }
+
+      let neededHeight = Math.max(initialSvgHeight, maxX - minX + margin.top + margin.bottom + 100);
+      svgElement.transition().duration(duration / 2).attr("height", neededHeight);
+      g.transition().duration(duration / 2).attr("transform", `translate(${margin.left},${margin.top - minX + 40})`);
+
+      nodes.forEach(d => { d.y = d.depth * 400; }); // Adjust horizontal separation if needed
+
+      const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++nodeCounter));
+      const nodeEnter = node.enter().append('g')
+        .attr('class', d => "node" + (d.children || d._children ? " node--internal" : " node--leaf") + (d._children ? " _children" : ""))
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .on('click', (event, d) => { if (d.children) { d._children = d.children; d.children = null; } else if (d._children) { d.children = d._children; d._children = null; } updateTree(d); })
+        .style('cursor', d => (d.children || d._children) ? 'pointer' : 'default');
+
+      nodeEnter.append('circle').attr('r', 1e-6);
+
+      nodeEnter.append('text')
+        .attr('dy', '.35em')
+        .attr('x', d => d.children || d._children ? -14 : 14)
+        .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+        .style("fill-opacity", 1e-6)
+        .call(wrapText, 380);
+
+      const nodeUpdate = nodeEnter.merge(node);
+      nodeUpdate.transition().duration(duration)
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('class', d => "node" + (d.children ? " node--internal" : " node--leaf") + (d._children ? " node--internal _children" : ""));
+
+      nodeUpdate.select('circle').attr('r', 8.5)
+        .style('fill', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            if (d._children) return palette.collapsedFill;
+            if (d.children) return palette.fill;
+            return "#fff";
+        })
+        .style('stroke', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            return palette.stroke;
+        });
+      nodeUpdate.select('text').style("fill-opacity", 1).call(wrapText, 380);
+
+      const nodeExit = node.exit().transition().duration(duration).attr('transform', d => `translate(${source.y},${source.x})`).remove();
+      nodeExit.select('circle').attr('r', 1e-6);
+      nodeExit.select('text').style('fill-opacity', 1e-6);
+
+      const link = g.selectAll('path.link').data(links, d => d.id);
+      const linkEnter = link.enter().insert('path', "g").attr('class', 'link').attr('d', d => { const o = { x: source.x0, y: source.y0 }; return diagonal(o, o); });
+
+      linkEnter.merge(link).transition().duration(duration).attr('d', d => diagonal(d, d.parent))
+        .style('stroke', d => {
+            const sourceNode = d.parent;
+            if (!sourceNode) return phaseColors.Default.stroke;
+            const l1AncestorName = sourceNode.data.originalStageName;
+            const colorPalette = phaseColors[l1AncestorName] || phaseColors.Default;
+            return colorPalette.stroke;
+        });
+      link.exit().transition().duration(duration).attr('d', d => { const o = { x: source.x, y: source.y }; return diagonal(o, o); }).remove();
+      nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+    }
+
+    function diagonal(s, d) { return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`; }
+
+    function wrapText(textElements, maxWidth) {
+        const textPartColors = {
+            name: '#343a40',
+            count: '#0056b3'
+        };
+        const countRegex = /(\s\(Total Count: \d+\))$/;
+
+        textElements.each(function () {
+            const textD3 = d3.select(this);
+            const originalNodeText = textD3.datum().data.name;
+            const x = parseFloat(textD3.attr("x") || 0);
+            const initialDy = textD3.attr("dy");
+            const textAnchor = textD3.attr("text-anchor");
+            const lineHeight = 1.1;
+
+            textD3.text(null);
+
+            let namePart = originalNodeText;
+            let countPartText = "";
+
+            const countMatch = originalNodeText.match(countRegex);
+            if (countMatch && originalNodeText.endsWith(countMatch[0])) {
+                namePart = originalNodeText.substring(0, originalNodeText.length - countMatch[0].length).trim();
+                countPartText = countMatch[0].trim();
+            }
+
+            const tokens = [];
+            namePart.split(/\s+/).filter(Boolean).forEach(word => {
+                tokens.push({ text: word, type: 'name' });
+            });
+            if (countPartText) {
+                tokens.push({ text: countPartText, type: 'count' });
+            }
+
+            if (tokens.length === 0 && originalNodeText) {
+                tokens.push({ text: originalNodeText, type: 'name' });
+            }
+
+            let currentTspan = textD3.append("tspan").attr("x", x).attr("dy", initialDy);
+            if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+
+            let lineTokens = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenObj = tokens[i];
+
+                lineTokens.push(tokenObj);
+                currentTspan.text(lineTokens.map(t => t.text).join(" "));
+
+                if (currentTspan.node().getComputedTextLength() > maxWidth && lineTokens.length > 1) {
+                    lineTokens.pop();
+
+                    currentTspan.text(null);
+                    lineTokens.forEach((prevToken, idx) => {
+                        currentTspan.append("tspan")
+                            .text((idx > 0 ? " " : "") + prevToken.text)
+                            .style("fill", textPartColors[prevToken.type] || textPartColors.name)
+                            .style("font-weight", prevToken.type === 'count' ? "bold" : "normal");
+                    });
+
+                    lineTokens = [tokenObj];
+                    currentTspan = textD3.append("tspan").attr("x", x).attr("dy", lineHeight + "em");
+                    if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+                }
+            }
+
+            currentTspan.text(null);
+            lineTokens.forEach((token, idx) => {
+                currentTspan.append("tspan")
+                    .text((idx > 0 ? " " : "") + token.text)
+                    .style("fill", textPartColors[token.type] || textPartColors.name)
+                    .style("font-weight", token.type === 'count' ? "bold" : "normal");
+            });
+
+            if (textD3.selectAll("tspan > tspan").empty() && textD3.select("tspan").text().length === 0 && originalNodeText) {
+                let t = textD3.select("tspan");
+                let displayText = originalNodeText;
+                t.text(displayText).style("fill", textPartColors.name);
+                if (t.node() && t.node().getComputedTextLength() > maxWidth && displayText.length > 20) {
+                    let estimatedChars = Math.floor(maxWidth / (t.node().getComputedTextLength()/displayText.length) );
+                    displayText = displayText.substring(0, Math.max(0, estimatedChars - 3)) + "...";
+                    t.text(displayText);
+                }
+            }
+        });
+    }
+  </script>
+</body>
+</html>

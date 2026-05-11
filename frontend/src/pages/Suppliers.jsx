@@ -11,7 +11,12 @@ export default function Suppliers() {
   useEffect(() => {
     setLoading(true)
     inventoryApi.get('/suppliers')
-      .then(res => setSuppliers(res.data || []))
+      .then(res => {
+        console.log('Suppliers Debug:', res);
+        const list = Array.isArray(res?.data) ? res.data : (res?.data?.suppliers || []);
+        setSuppliers(list);
+        setError(null);
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
@@ -59,13 +64,13 @@ export default function Suppliers() {
                     <tr key={s.id}>
                       <td style={{ fontWeight: 500 }}>{s.name}</td>
                       <td>
-                        <div>{s.contact_person || 'N/A'}</div>
+                        <div>{s.contactPerson || 'N/A'}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{s.email || s.phone || ''}</div>
                       </td>
                       <td>{s.city ? `${s.city}, ${s.state}` : 'N/A'}</td>
-                      <td>{s.lead_time_days} days</td>
+                      <td>{s.leadTimeDays} days</td>
                       <td>
-                        {s.is_active ? (
+                        {s.isActive ? (
                           <span className="badge badge-success">Active</span>
                         ) : (
                           <span className="badge badge-neutral">Inactive</span>

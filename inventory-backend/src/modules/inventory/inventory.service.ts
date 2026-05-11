@@ -249,16 +249,12 @@ export class InventoryService {
 
     return alerts.map((a) => ({
       productId: a.product_id,
-      sku: a.sku,
-      name: a.name,
-      currentStock: a.quantity,
-      reservedStock: a.reserved_qty,
-      availableStock: a.quantity - a.reserved_qty,
-      reorderPoint: a.reorder_point,
-      suggestedReorder: a.reorder_qty,
-      deficit: a.reorder_point - a.quantity,
-      supplier: a.supplier_name,
-      category: a.category_name,
+      quantity: a.quantity,
+      product: {
+        name: a.name,
+        sku: a.sku,
+        reorderPoint: a.reorder_point
+      },
       severity: a.quantity === 0 ? 'critical' : a.quantity <= Math.floor(a.reorder_point / 2) ? 'high' : 'medium',
     }));
   }

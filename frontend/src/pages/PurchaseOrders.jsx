@@ -20,7 +20,12 @@ export default function PurchaseOrders() {
   useEffect(() => {
     setLoading(true)
     inventoryApi.get('/purchase-orders')
-      .then(res => setOrders(res.data || []))
+      .then(res => {
+        console.log('Purchase Orders Debug:', res);
+        const list = Array.isArray(res?.data) ? res.data : (res?.data?.orders || []);
+        setOrders(list);
+        setError(null);
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [])
@@ -67,11 +72,11 @@ export default function PurchaseOrders() {
                 <tbody>
                   {orders.map(po => (
                     <tr key={po.id}>
-                      <td style={{ fontWeight: 600, color: 'var(--indigo-light)' }}>{po.po_number}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--indigo-light)' }}>{po.poNumber}</td>
                       <td>{po.supplier?.name || 'Unknown'}</td>
-                      <td>{new Date(po.order_date).toLocaleDateString()}</td>
-                      <td>{po.expected_date ? new Date(po.expected_date).toLocaleDateString() : 'N/A'}</td>
-                      <td>{po.total_amount ? `R$${po.total_amount}` : '-'}</td>
+                      <td>{new Date(po.orderDate).toLocaleDateString()}</td>
+                      <td>{po.expectedDate ? new Date(po.expectedDate).toLocaleDateString() : 'N/A'}</td>
+                      <td>{po.totalAmount ? `R$${po.totalAmount}` : '-'}</td>
                       <td>
                         <span className={`badge ${STATUS_BADGE[po.status] || 'badge-neutral'}`}>
                           {po.status}

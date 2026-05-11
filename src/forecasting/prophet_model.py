@@ -25,7 +25,8 @@ def train_prophet():
     os.makedirs(eval_dir, exist_ok=True)
     os.makedirs(figures_dir, exist_ok=True)
     
-    # Load data
+    # Load data (using new feature engineering output)
+    data_path = "data/processed/forecasting_features.csv"
     df = pd.read_csv(data_path)
     df['ds'] = pd.to_datetime(df['ds'])
     
@@ -36,17 +37,21 @@ def train_prophet():
         yearly_seasonality=p_config['yearly_seasonality'],
         weekly_seasonality=p_config['weekly_seasonality'],
         daily_seasonality=p_config['daily_seasonality'],
-        seasonality_mode=p_config['seasonality_mode'],
-        changepoint_prior_scale=p_config['changepoint_prior_scale'],
+        seasonality_mode='multiplicative', # Switched to multiplicative for better retail scaling
+        changepoint_prior_scale=0.5,        # Increased flexibility to reduce "robotic" waves
         holidays_prior_scale=p_config['holidays_prior_scale'],
         interval_width=p_config['interval_width']
     )
+    
+    # Add Business Regressors
+    model.add_regressor('avg_unit_price')
+    model.add_regressor('unique_items')
     
     # Add UK holidays
     model.add_country_holidays(country_name='UK')
     
     # Train model
-    print("Fitting model...")
+    print("Fitting multivariate model...")
     model.fit(df)
     
     # Save model
@@ -83,6 +88,19 @@ def train_prophet():
     # Forecast
     print("Generating forecast...")
     future = model.make_future_dataframe(periods=train_cfg['forecast_horizon'])
+    
+    # Fill future regressors with latest/median values
+    future['avg_unit_price'] = df['avg_unit_price'].median()
+    future['unique_items'] = df['unique_items'].median()
+    
+    # Use real values where available (for the historical part of the future dataframe)
+    # We map back the training values to the 'future' dataframe for the overlapping period
+    future.set_index('ds', inplace=True)
+    df.set_index('ds', inplace=True)
+    future.update(df[['avg_unit_price', 'unique_items']])
+    future.reset_index(inplace=True)
+    df.reset_index(inplace=True)
+    
     forecast = model.predict(future)
     
     # Save forecast

@@ -30,6 +30,12 @@ def get_forecast(days: int = Query(default=30, ge=7, le=90)):
             try:
                 model = joblib.load(prophet_path)
                 future = model.make_future_dataframe(periods=days)
+                
+                # Fill regressors with stable median values for the live prediction
+                # In a real production scenario, these would come from the latest DB state
+                future['avg_unit_price'] = 3.0  # Median from training
+                future['unique_items'] = 150    # Median from training
+                
                 forecast = model.predict(future)
                 future_only = forecast.tail(days)[["ds", "yhat", "yhat_lower", "yhat_upper", "trend"]]
                 points = []

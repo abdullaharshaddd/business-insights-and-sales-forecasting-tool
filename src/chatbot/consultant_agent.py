@@ -66,19 +66,25 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 memory_store = MemoryStore()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Database
+# 2. Database (Unified PostgreSQL)
 # ─────────────────────────────────────────────────────────────────────────────
-DB_PATH = cfg["paths"]["olist_db"]
-safe_path = DB_PATH.replace("\\", "/")
-safe_db_uri = f"sqlite:///file:{safe_path}?mode=ro&uri=true"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # Fallback to local config if env is missing
+    DATABASE_URL = cfg["database"]["url"]
+
+# SQLAlchemy needs postgresql:// instead of postgresql:// for some drivers, 
+# but mostly we just need the right URI format.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 db = SQLDatabase.from_uri(
-    safe_db_uri,
+    DATABASE_URL,
     sample_rows_in_table_info=3,
     include_tables=[
         "orders", "order_items", "order_payments", "order_reviews",
-        "customers", "sellers", "products",
-        "product_category_name_translation", "geolocation",
+        "customers", "suppliers", "products", "categories",
+        "inventory", "stock_movements"
     ],
 )
 
@@ -372,7 +378,7 @@ async def data_gatherer_node(state: AgentState):
             elif tool_name == "sql_query":
                 # Let the LLM draft a SQL query for this specific purpose
                 schema = db.get_table_info()
-                sql_prompt = f"Write a SQLite SELECT query for: {purpose}\nSchema: {schema}\nRespond with ONLY raw SQL."
+                sql_prompt = f"Write a PostgreSQL SELECT query for: {purpose}\nSchema: {schema}\nRespond with ONLY raw SQL."
                 res = groq_client.chat.completions.create(
                     model=REACT_MODEL,
                     messages=[{"role": "user", "content": sql_prompt}],
@@ -467,7 +473,7 @@ Respond in JSON: {{"kpi_id": "the_id_or_null", "filters": null}}"""
     # 4. Fallback: SQL
     schema = db.get_table_info()
     context = await search_business_knowledge(state["user_input"], n_results=2)
-    sql_prompt = f"""Write SQLite SELECT for: {state["user_input"]}
+    sql_prompt = f"""Write PostgreSQL SELECT for: {state["user_input"]}
 Schema: {schema}
 Rules: {context}
 Respond with ONLY raw SQL."""

@@ -59,8 +59,8 @@
     "label": "Top Product Categories by Revenue",
     "category": "Products",
     "description": "Ranking of product categories based on total generated revenue.",
-    "sql_formula": "SELECT t.product_category_name_english, SUM(oi.price + oi.freight_value) as revenue FROM order_items oi JOIN products p ON oi.product_id = p.product_id JOIN product_category_name_translation t ON p.product_category_name = t.product_category_name GROUP BY 1 ORDER BY 2 DESC",
-    "tables": ["order_items", "products", "product_category_name_translation"],
+    "sql_formula": "SELECT c.name as category, SUM(oi.price + oi.freight_value) as revenue FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN categories c ON p.category_id = c.id GROUP BY 1 ORDER BY 2 DESC",
+    "tables": ["order_items", "products", "categories"],
     "unit": "BRL (R$)"
   },
   "customer_geographic_concentration": {

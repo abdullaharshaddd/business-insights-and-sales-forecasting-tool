@@ -5,24 +5,23 @@ import PageHeader from '../components/PageHeader'
 
 export default function Inventory() {
   const [products, setProducts] = useState([])
-  const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     setLoading(true)
-    // Fetch products and alerts in parallel
-    Promise.all([
-      inventoryApi.get('/products').catch(err => ({ error: err.message })),
-      inventoryApi.get('/inventory/alerts').catch(err => ({ error: err.message }))
-    ]).then(([productsRes, alertsRes]) => {
-      if (productsRes.error || alertsRes.error) {
-        setError(productsRes.error || alertsRes.error)
-      } else {
-        setProducts(productsRes.data || [])
-        setAlerts(alertsRes.data || [])
-      }
-    }).finally(() => setLoading(false))
+    inventoryApi.get('/products')
+      .then(res => {
+        console.log('Inventory Debug - Products:', res);
+        const productList = Array.isArray(res?.data) ? res.data : (res?.data?.products || []);
+        setProducts(productList);
+        setError(null);
+      })
+      .catch(err => {
+        console.error('Inventory Fetch Error:', err);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -46,22 +45,6 @@ export default function Inventory() {
         <LoadingSpinner message="Loading inventory data from Node.js backend..." />
       ) : (
         <>
-          {/* Alerts Section */}
-          {!error && alerts.length > 0 && (
-            <div className="card section-gap" style={{ borderColor: 'var(--danger)', background: 'rgba(239,68,68,0.05)' }}>
-              <div className="card-header">
-                <p className="card-title" style={{ color: 'var(--danger)' }}>Low Stock Alerts ({alerts.length})</p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {alerts.map((alert, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)' }}>
-                    <span>{alert.product_name}</span>
-                    <span style={{ color: 'var(--danger)', fontWeight: 600 }}>{alert.available_qty} left (Reorder at {alert.reorder_point})</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Products Table */}
           <div className="card">
@@ -78,7 +61,8 @@ export default function Inventory() {
                       <th>Product Name</th>
                       <th>Category</th>
                       <th>Price</th>
-                      <th>Stock Status</th>
+                      <th>Stock Level</th>
+                      <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -88,12 +72,15 @@ export default function Inventory() {
                         <td>{p.sku}</td>
                         <td style={{ fontWeight: 500 }}>{p.name}</td>
                         <td>{p.category?.name || 'Uncategorized'}</td>
-                        <td>R${p.base_price}</td>
+                        <td>R${p.basePrice}</td>
+                        <td style={{ fontWeight: 700, textAlign: 'center' }}>
+                          {p.inventory?.quantity || 0}
+                        </td>
                         <td>
-                          {p.inventory?.available_qty > p.reorder_point ? (
-                            <span className="badge badge-success">In Stock ({p.inventory.available_qty})</span>
-                          ) : p.inventory?.available_qty > 0 ? (
-                            <span className="badge badge-warning">Low Stock ({p.inventory.available_qty})</span>
+                          {(p.inventory?.quantity || 0) > p.reorderPoint ? (
+                            <span className="badge badge-success">In Stock</span>
+                          ) : (p.inventory?.quantity || 0) > 0 ? (
+                            <span className="badge badge-warning">Low Stock</span>
                           ) : (
                             <span className="badge badge-danger">Out of Stock</span>
                           )}

@@ -28,7 +28,17 @@ const interceptors = {
 api.interceptors.request.use(...interceptors.request)
 api.interceptors.response.use(...interceptors.response)
 
-inventoryApi.interceptors.request.use(...interceptors.request)
+inventoryApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
+
 inventoryApi.interceptors.response.use(...interceptors.response)
 
 export default api

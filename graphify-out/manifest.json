@@ -1,0 +1,406 @@
+{
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\main.py": {
+    "mtime": 1778243934.7993822,
+    "hash": "b34770f533c134063cd264e71ddd98f8"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\run_pipeline.py": {
+    "mtime": 1776774508.6559849,
+    "hash": "6059cb8a30259612b28a0354da129917"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\__init__.py": {
+    "mtime": 1778243930.4490397,
+    "hash": "25d3b9dac2500e5da6790e41ddac1c24"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\routers\\analytics.py": {
+    "mtime": 1778243930.4515429,
+    "hash": "5d4f653ba698ef6057e1ceb84a2b5bdd"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\routers\\chat.py": {
+    "mtime": 1778243930.4521222,
+    "hash": "00f377097d4d1fd8a9e8dfd49e6e8fa6"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\routers\\churn.py": {
+    "mtime": 1778243930.4521222,
+    "hash": "3ab456d0afa131989aa3bb0ee38103cb"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\routers\\dashboard.py": {
+    "mtime": 1778244535.735345,
+    "hash": "18f3494ad46d358d47633042402cc889"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\routers\\forecasting.py": {
+    "mtime": 1778253104.3531864,
+    "hash": "f52fb7e6185bf1be8be2e6eead0600bf"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\api\\routers\\__init__.py": {
+    "mtime": 1778243930.4500408,
+    "hash": "1acd8561bec8f6a2d14bf31df3873101"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\vite.config.js": {
+    "mtime": 1778244501.4841826,
+    "hash": "e141a1530f5c4ce708f5b46534e4622b"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\App.jsx": {
+    "mtime": 1778244579.0389025,
+    "hash": "acccc661dfba6ed82e2ddab158d75e91"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\main.jsx": {
+    "mtime": 1778243934.7903857,
+    "hash": "d667f2a54978de42e5310b02f1ade3e8"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\api\\client.js": {
+    "mtime": 1778247192.764536,
+    "hash": "0c33517755434a7c2578aaa5762a3d8c"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\components\\LoadingSpinner.jsx": {
+    "mtime": 1778243934.7888494,
+    "hash": "903a136dcc4ab9748d13c0e183a5aaa9"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\components\\PageHeader.jsx": {
+    "mtime": 1778243934.7893753,
+    "hash": "7305592394f426a04c9b33127eca4dd8"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\components\\Sidebar.jsx": {
+    "mtime": 1778244614.5585525,
+    "hash": "00fd3adf339caf551bffb1931d14631a"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\context\\AuthContext.jsx": {
+    "mtime": 1778248654.4930022,
+    "hash": "14ff605d5ae02c73e0feda948206f1dd"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Analytics.jsx": {
+    "mtime": 1778243934.7924132,
+    "hash": "7546e91d0a060501f5cf7d2f1c462940"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Chat.jsx": {
+    "mtime": 1778243934.7929277,
+    "hash": "23c61479a3004444b1bfe60fdee131fa"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Churn.jsx": {
+    "mtime": 1778243934.7929277,
+    "hash": "777b2a9aa5fcd7c9bd2f4bb3b79e15fc"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Dashboard.jsx": {
+    "mtime": 1778243934.7953055,
+    "hash": "32b461212b418ef0947998aa654a767f"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Forecasting.jsx": {
+    "mtime": 1778243934.7968662,
+    "hash": "1c0eab4cfc63d7a7f4c85a1ab90c98d5"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Inventory.jsx": {
+    "mtime": 1778249687.4353428,
+    "hash": "1fb356fd2d5fd483879866274206d1ef"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Login.jsx": {
+    "mtime": 1778244561.6442845,
+    "hash": "fd2fcbfa4480034bd6ed90e7c138dc4e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\PurchaseOrders.jsx": {
+    "mtime": 1778249012.6632888,
+    "hash": "35850b3349e25e91c0bc4081c1642b87"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\src\\pages\\Suppliers.jsx": {
+    "mtime": 1778249002.1909413,
+    "hash": "73e5b5cf6d67d670e412ef937be03a43"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\check-db.js": {
+    "mtime": 1778245829.0756197,
+    "hash": "36635b6de61cd894597fba4c490d149e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\prisma\\migrations\\20260508121007_unified_master_schema\\migration.sql": {
+    "mtime": 1778243943.6470358,
+    "hash": "1a9318cf9231d80890bd0fdbd3ed1d39"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\app.ts": {
+    "mtime": 1778243943.6500697,
+    "hash": "9d3ee045338f6d83a539324975bad789"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\server.ts": {
+    "mtime": 1778243943.6812215,
+    "hash": "6a08175484bca1e80512ac91fc57d76f"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\config\\constants.ts": {
+    "mtime": 1778243943.651578,
+    "hash": "2be9d717629e70671b3c39546a2e3003"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\config\\database.ts": {
+    "mtime": 1778243943.6521537,
+    "hash": "02bd5fff4c9b10ca5555d65b6d03824a"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\config\\env.ts": {
+    "mtime": 1778243943.65348,
+    "hash": "5802e2da840c2652312c4c84997d7f66"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\middleware\\audit.middleware.ts": {
+    "mtime": 1778243943.653988,
+    "hash": "be946476fa3244e9cff654c5bd3a16e7"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\middleware\\auth.middleware.ts": {
+    "mtime": 1778243943.655514,
+    "hash": "83d8752267d676f677847eacfcde9a93"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\middleware\\error.middleware.ts": {
+    "mtime": 1778243943.6565213,
+    "hash": "b6eb77f80dcbb73db7aa2f440384d893"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\middleware\\validate.middleware.ts": {
+    "mtime": 1778243943.6575224,
+    "hash": "1656c456ad3ac72361440393646c367e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\audit-logs\\audit-log.routes.ts": {
+    "mtime": 1778243943.6595225,
+    "hash": "fd2aa5607589bd301f51e40e28a98eba"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\auth\\auth.routes.ts": {
+    "mtime": 1778243943.6605217,
+    "hash": "439c20b6fcf8581ec5bfeaa9e5d293df"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\auth\\auth.schema.ts": {
+    "mtime": 1778243943.6620328,
+    "hash": "d75236031544029baac7c8fabed02e94"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\auth\\auth.service.ts": {
+    "mtime": 1778243943.6630414,
+    "hash": "75f662148a78e76004e978c6695c3002"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\categories\\category.routes.ts": {
+    "mtime": 1778243943.6643543,
+    "hash": "0438cb7d11d7c6acaca8ce615efdf34b"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\categories\\category.schema.ts": {
+    "mtime": 1778243943.6643543,
+    "hash": "bc0cf13a4fe030fc1a30b923ecaf31ec"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\categories\\category.service.ts": {
+    "mtime": 1778243943.6653547,
+    "hash": "3c45ece9eba49465babd11da38a2bc8b"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\inventory\\inventory.routes.ts": {
+    "mtime": 1778243943.6668606,
+    "hash": "35c3c6e3bccd4db2412d9946e1b7353a"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\inventory\\inventory.schema.ts": {
+    "mtime": 1778243943.6678667,
+    "hash": "22c10fea1460b605540a1d8782d141b1"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\inventory\\inventory.service.ts": {
+    "mtime": 1778249397.129925,
+    "hash": "6b012ec88694c3da1a6f596d9b02afb7"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\products\\product.routes.ts": {
+    "mtime": 1778243943.6700382,
+    "hash": "d93fffd22fc8e9efcc29668fee93a183"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\products\\product.schema.ts": {
+    "mtime": 1778243943.6715589,
+    "hash": "fa77eb7f115517ce32aed98b69bb6756"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\products\\product.service.ts": {
+    "mtime": 1778243943.6720848,
+    "hash": "48e31b44eeda1591f6c43ba011e61163"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\purchase-orders\\purchase-order.routes.ts": {
+    "mtime": 1778243943.6730938,
+    "hash": "8f6031f5e007cf729ba77eaf2b90bde9"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\purchase-orders\\purchase-order.schema.ts": {
+    "mtime": 1778243943.6740942,
+    "hash": "a89c551863967162e1a053b276dfad1f"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\purchase-orders\\purchase-order.service.ts": {
+    "mtime": 1778243943.6750934,
+    "hash": "da864dff5dcaaf1b173418b40ab3f5cd"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\suppliers\\supplier.routes.ts": {
+    "mtime": 1778243943.6770992,
+    "hash": "6e6e74f52211b3fe8770a85b0f26627d"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\suppliers\\supplier.schema.ts": {
+    "mtime": 1778243943.6770992,
+    "hash": "dc447f0c9334469ca6f3900da48553e1"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\modules\\suppliers\\supplier.service.ts": {
+    "mtime": 1778243943.6780984,
+    "hash": "6df006d6ac5cd7223064e6e7b0ae3ad4"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\seed\\restore-real-products.js": {
+    "mtime": 1778251340.7318692,
+    "hash": "00a96767292132dc44b8344e2b971672"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\seed\\seed-from-olist.ts": {
+    "mtime": 1778243943.680207,
+    "hash": "3a07769f0ee5f552c5b038a6b2db820d"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\shared\\errors\\AppError.ts": {
+    "mtime": 1778243943.6822355,
+    "hash": "082d481d67c6ff7b6878bae46d1005b7"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\inventory-backend\\src\\shared\\utils\\response.ts": {
+    "mtime": 1778243943.6832352,
+    "hash": "000a0d3f680fca827a08a82e534acce8"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\scratch\\check_db.py": {
+    "mtime": 1778243943.6859589,
+    "hash": "29964baf477659c2d64ef6fe8af9cc72"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\scripts\\data_cleaning.py": {
+    "mtime": 1776783961.448845,
+    "hash": "2f7d6492048a27d78fe04abf1cc552ec"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\__init__.py": {
+    "mtime": 1776774508.6573389,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\analytics\\analytical_tools.py": {
+    "mtime": 1778245670.4649773,
+    "hash": "06df3ea2388c873f61f09a96155cadad"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\analytics\\kpi_engine.py": {
+    "mtime": 1778243943.6890314,
+    "hash": "72a04c36b9e19a97ddbd4fc69ff3b8da"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\chatbot\\business_toolkit.py": {
+    "mtime": 1778243943.690349,
+    "hash": "1198febd264c3c691a32a9a64ceb0068"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\chatbot\\consultant_agent.py": {
+    "mtime": 1778250844.8629484,
+    "hash": "c5fdd1eb9c869ff9fe767408f0d0e3d7"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\chatbot\\ingest_knowledge.py": {
+    "mtime": 1777746025.968089,
+    "hash": "698115e7f8549853291f5f5be5221875"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\chatbot\\memory_store.py": {
+    "mtime": 1778243943.690349,
+    "hash": "15b78fe143373543fd8ebf856c46be7d"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\evaluation\\evaluate_churn.py": {
+    "mtime": 1776774508.658341,
+    "hash": "4dda926928dcb1be8d1d9a87bcd3c0da"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\evaluation\\__init__.py": {
+    "mtime": 1776774508.6573389,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\features\\churn_features.py": {
+    "mtime": 1776774508.6593385,
+    "hash": "94c73f4032a447aed8e875555eddbe0a"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\features\\__init__.py": {
+    "mtime": 1776774508.6593385,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\forecasting\\feature_engineering.py": {
+    "mtime": 1778253036.3409235,
+    "hash": "c59749fcc02b62ee25b80ab287462272"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\forecasting\\prophet_model.py": {
+    "mtime": 1778253068.456893,
+    "hash": "1ce840b054b030a5e3b0ee9c46cf61b5"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\models\\churn_model.py": {
+    "mtime": 1776782959.841824,
+    "hash": "46c1110ca1079133088a18cdc94f9a5a"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\models\\lstm_forecaster.py": {
+    "mtime": 1776783824.0369422,
+    "hash": "5c85b104581f6c6d384002633443c681"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\models\\__init__.py": {
+    "mtime": 1776774508.6603415,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\training\\train_churn.py": {
+    "mtime": 1776774508.6623409,
+    "hash": "3fd444f3f913710d1552cfff1cabd998"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\training\\__init__.py": {
+    "mtime": 1776774508.6623409,
+    "hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\utils\\preprocess_forecasting.py": {
+    "mtime": 1776782959.8428237,
+    "hash": "2fde989bf75bd3042e4bc7172ff3c3c2"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\src\\utils\\preprocess_olist.py": {
+    "mtime": 1776791934.942749,
+    "hash": "547947f2c15e2e60dd6c3df7d4f38fa6"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\DATABASE.md": {
+    "mtime": 1778247421.2166665,
+    "hash": "c8daef7051836832f9d0c45f724040bd"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\memory.md": {
+    "mtime": 1778236129.3232038,
+    "hash": "687f7ed27e82625128ec36df55ce23f2"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\README.md": {
+    "mtime": 1776782959.8255742,
+    "hash": "63a909b6f725887dd246b3ae6282fe66"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\requirements.txt": {
+    "mtime": 1778243934.8018918,
+    "hash": "8c43eadf040519ba6a629e9b3f57fab9"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\config\\config.yaml": {
+    "mtime": 1778243943.64019,
+    "hash": "2b1e76ee21bee615946d6c7a5d3ffd2e"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\graphify-out\\converted\\online_retail_d3485cd8.md": {
+    "mtime": 1778420770.081774,
+    "hash": "bb0fb8e019ea093b2461f9dda1f206e3"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\docs\\inventory-backend-plan.md": {
+    "mtime": 1778243943.6417682,
+    "hash": "c2c6e4e223e458814e36bc2a96353e53"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\frontend\\index.html": {
+    "mtime": 1778243930.4691353,
+    "hash": "ae964727fe5acac9d632483c1e658f54"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\models\\lstm\\forecast_plot.png": {
+    "mtime": 1776786155.0845692,
+    "hash": "0c2a40fba1abb1ae1b16dd8318f982de"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\bias_check_segments.png": {
+    "mtime": 1776774508.644207,
+    "hash": "e601e51503e755cc03dc9ed5b5e2c538"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\confusion_matrix_dnn_churnnet.png": {
+    "mtime": 1776774508.645215,
+    "hash": "03214b8b9a041df413e738f687a2ab44"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\confusion_matrix_gradient_boosting.png": {
+    "mtime": 1776774508.6462133,
+    "hash": "1809bc42bc6b01607080d591f91eaba3"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\confusion_matrix_logistic_regression.png": {
+    "mtime": 1776774508.6472154,
+    "hash": "e91cb77cb6288dbb59cf2ba5ba192cc9"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\confusion_matrix_random_forest.png": {
+    "mtime": 1776774508.6472154,
+    "hash": "3efe9b21df6e22ac59b7ca2e4a389cd6"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\pr_comparison.png": {
+    "mtime": 1776774508.6492157,
+    "hash": "7a83afd2ae05a436f7d31296e8abb875"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\roc_comparison.png": {
+    "mtime": 1776774508.6507862,
+    "hash": "7840388082764d27e368a572bec79254"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\training_curves.png": {
+    "mtime": 1776785537.6494288,
+    "hash": "051509e984934e6ba840a32411e0ce2f"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\forecasting\\forecast_components.png": {
+    "mtime": 1778253127.63713,
+    "hash": "0c4fbfe33479be24bcf5440b2601c4de"
+  },
+  "C:\\Users\\user\\Downloads\\BISFT\\business-insights-and-sales-forecasting-tool\\reports\\figures\\forecasting\\forecast_plot.png": {
+    "mtime": 1778253127.1092834,
+    "hash": "25724f26e8f5f5c1563550451a0c38cc"
+  }
+}
