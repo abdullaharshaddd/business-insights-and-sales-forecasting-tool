@@ -34,7 +34,6 @@ CREATE TABLE retail_invoice_items (
     id                  SERIAL          PRIMARY KEY,
     invoiceno           VARCHAR(20)     NOT NULL REFERENCES retail_invoices(invoiceno),
     stockcode           VARCHAR(20)     REFERENCES retail_products(stockcode),
-    description         TEXT,
     quantity            INTEGER         NOT NULL,
     unitprice           NUMERIC(10, 2)  NOT NULL,
     totalprice          NUMERIC(12, 2)  NOT NULL

@@ -150,7 +150,6 @@ def load_online_retail(conn):
                 (
                     r.invoiceno,
                     r.stockcode,
-                    _nan_to_none(r.description),
                     int(r.quantity) if pd.notna(r.quantity) else 0,
                     float(r.unitprice) if pd.notna(r.unitprice) else 0.0,
                     float(r.totalprice) if pd.notna(r.totalprice) else 0.0,
@@ -160,7 +159,7 @@ def load_online_retail(conn):
             execute_values(
                 cur,
                 """INSERT INTO retail_invoice_items
-                   (invoiceno, stockcode, description, quantity, unitprice, totalprice)
+                   (invoiceno, stockcode, quantity, unitprice, totalprice)
                    VALUES %s""",
                 rows,
             )
