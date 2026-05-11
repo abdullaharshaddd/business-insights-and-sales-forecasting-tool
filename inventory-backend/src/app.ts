@@ -13,6 +13,7 @@ import inventoryRoutes from './modules/inventory/inventory.routes';
 import supplierRoutes from './modules/suppliers/supplier.routes';
 import purchaseOrderRoutes from './modules/purchase-orders/purchase-order.routes';
 import auditLogRoutes from './modules/audit-logs/audit-log.routes';
+import salesRoutes from './modules/sales/sales.routes';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/suppliers', supplierRoutes);
 app.use('/api/v1/purchase-orders', purchaseOrderRoutes);
 app.use('/api/v1/audit-logs', auditLogRoutes);
+app.use('/api/v1/sales', salesRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────
 app.use((_req, res) => {
