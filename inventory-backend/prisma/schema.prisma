@@ -32,6 +32,13 @@ enum MovementType {
   RETURN
 }
 
+enum SaleStatus {
+  draft
+  completed
+  cancelled
+  refunded
+}
+
 enum PurchaseOrderStatus {
   draft
   submitted
@@ -53,9 +60,9 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  stockMovements    StockMovement[]
-  purchaseOrders    PurchaseOrder[]
-  auditLogs         AuditLog[]
+  stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
+  auditLogs      AuditLog[]
 
   @@map("users")
 }
@@ -325,6 +332,7 @@ model Product {
   inventory          Inventory?
   stockMovements     StockMovement[]
   purchaseOrderItems PurchaseOrderItem[]
+  orderItems         OrderItem[]
 
   @@index([categoryId])
   @@index([supplierId])
@@ -429,4 +437,116 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ─── Historical Olist Data (Unified) ──────────────────────────────────────
+
+model Customer {
+  id               String  @id @map("customer_id")
+  uniqueId         String  @map("customer_unique_id")
+  zipCodePrefix    Int     @map("customer_zip_code_prefix")
+  city             String  @map("customer_city")
+  state            String  @map("customer_state")
+  
+  orders           Order[]
+
+  @@map("customers")
+}
+
+model Order {
+  id                         String    @id @map("order_id")
+  customerId                 String    @map("customer_id")
+  status                     String    @map("order_status")
+  purchaseTimestamp          DateTime? @map("order_purchase_timestamp")
+  approvedAt                 DateTime? @map("order_approved_at")
+  deliveredCarrierDate       DateTime? @map("order_delivered_carrier_date")
+  deliveredCustomerDate      DateTime? @map("order_delivered_customer_date")
+  estimatedDeliveryDate      DateTime? @map("order_estimated_delivery_date")
+
+  customer                   Customer  @relation(fields: [customerId], references: [id])
+  items                      OrderItem[]
+  payments                   OrderPayment[]
+  reviews                    OrderReview[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  orderId              String  @map("order_id")
+  orderItemId          Int     @map("order_item_id")
+  productId            String  @map("product_id")
+  sellerId             String  @map("seller_id")
+  shippingLimitDate    DateTime? @map("shipping_limit_date")
+  price                Decimal @db.Decimal(10, 2)
+  freightValue         Decimal @map("freight_value") @db.Decimal(10, 2)
+
+  order                Order   @relation(fields: [orderId], references: [id])
+  product              Product @relation(fields: [productId], references: [id])
+  supplier             Supplier @relation(fields: [sellerId], references: [id])
+
+  @@id([orderId, orderItemId])
+  @@map("order_items")
+}
+
+model OrderPayment {
+  orderId              String  @map("order_id")
+  paymentSequential    Int     @map("payment_sequential")
+  paymentType          String  @map("payment_type")
+  paymentInstallments  Int     @map("payment_installments")
+  paymentValue         Decimal @map("payment_value") @db.Decimal(10, 2)
+
+  order                Order   @relation(fields: [orderId], references: [id])
+
+  @@id([orderId, paymentSequential])
+  @@map("order_payments")
+}
+
+model OrderReview {
+  id                   String  @id @map("review_id")
+  orderId              String  @map("order_id")
+  reviewScore          Int     @map("review_score")
+  reviewCommentTitle   String? @map("review_comment_title")
+  reviewCommentMessage String? @map("review_comment_message")
+  reviewCreationDate   DateTime? @map("review_creation_date")
+  reviewAnswerTimestamp DateTime? @map("review_answer_timestamp")
+
+  order                Order   @relation(fields: [orderId], references: [id])
+
+  @@map("order_reviews")
+}
+
+model Geolocation {
+  zipCodePrefix        Int     @map("geolocation_zip_code_prefix")
+  lat                  Float @map("geolocation_lat")
+  lng                  Float @map("geolocation_lng")
+  city                 String  @map("geolocation_city")
+  state                String  @map("geolocation_state")
+
+  @@id([zipCodePrefix, lat, lng])
+  @@map("geolocation")
+}
+
+// ─── Agent Memory Store (Unified) ────────────────────────────────────────
+
+model Finding {
+  id               Int      @id @default(autoincrement())
+  timestamp        DateTime @default(now())
+  topic            String
+  finding          String   @db.Text
+  source           String   @default("agent")
+  importance       String   @default("normal")
+
+  @@map("findings")
+  @@index([topic])
+}
+
+model ConversationSummary {
+  id               Int      @id @default(autoincrement())
+  timestamp        DateTime @default(now())
+  threadId         String   @map("thread_id")
+  summary          String   @db.Text
+  keyTopics        String?  @map("key_topics") // JSON string
+
+  @@map("conversation_summaries")
+  @@index([threadId])
 }
