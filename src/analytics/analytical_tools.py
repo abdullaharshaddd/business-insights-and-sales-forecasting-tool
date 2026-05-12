@@ -1,13 +1,11 @@
 """
 Analytical Intelligence Layer
 ==============================
-Deterministic analytical tools for trend analysis, comparisons,
-root-cause investigation, and business recommendations.
-These power the multi-step reasoning in the Agentic RAG system.
+Deterministic analytical tools — all queries run against BISFT PostgreSQL.
+No CSV files. No SQLite. No old table names.
 """
 
 from sqlalchemy import create_engine, text
-import json
 import pandas as pd
 import yaml
 
@@ -23,17 +21,16 @@ def _conn():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Revenue Trend Analysis
+# 1. Revenue Trend Analysis (Olist)
 # ─────────────────────────────────────────────────────────────────────────────
 def analyze_revenue_trends() -> str:
-    """Monthly revenue trends with MoM growth rates."""
     sql = """
-    SELECT to_char(o.order_purchase_timestamp, 'YYYY-MM') AS month,
+    SELECT TO_CHAR(o.order_purchase_timestamp, 'YYYY-MM') AS month,
            ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue,
-           COUNT(DISTINCT o.order_id) AS orders
-    FROM orders o
-    JOIN order_items oi ON o.order_id = oi.order_id
-    WHERE o.order_status = 'delivered'
+           COUNT(DISTINCT oi.order_id) AS orders
+    FROM olist_orders o
+    JOIN olist_order_items oi ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered' AND o.order_purchase_timestamp IS NOT NULL
     GROUP BY 1 ORDER BY 1
     """
     with _conn() as conn:
@@ -43,7 +40,7 @@ def analyze_revenue_trends() -> str:
                 return "No revenue data available."
 
             df["mom_growth"] = df["revenue"].pct_change() * 100
-            df["avg_order_value"] = (df["revenue"] / df["orders"]).astype(float).round(2)
+            df["aov"] = (df["revenue"] / df["orders"]).astype(float).round(2)
 
             recent = df.tail(6)
             overall_trend = "GROWING" if recent["mom_growth"].mean() > 0 else "DECLINING"
@@ -51,7 +48,7 @@ def analyze_revenue_trends() -> str:
             low = df.loc[df["revenue"].idxmin()]
 
             lines = [
-                "[Revenue Trend Analysis]\n",
+                "[Revenue Trend Analysis — Olist]\n",
                 f"Overall Trend (last 6 months): {overall_trend}",
                 f"Avg MoM Growth (last 6 months): {recent['mom_growth'].mean():.1f}%",
                 f"Peak Month: {peak['month']} (R${peak['revenue']:,.2f})",
@@ -60,7 +57,7 @@ def analyze_revenue_trends() -> str:
             ]
             for _, r in recent.iterrows():
                 g = f"+{r['mom_growth']:.1f}%" if r["mom_growth"] > 0 else f"{r['mom_growth']:.1f}%"
-                lines.append(f"  {r['month']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | MoM: {g}")
+                lines.append(f"  {r['month']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | AOV: R${r['aov']} | MoM: {g}")
 
             return "\n".join(lines)
         except Exception as e:
@@ -68,19 +65,17 @@ def analyze_revenue_trends() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Delivery Performance Analysis
+# 2. Delivery Performance (Olist)
 # ─────────────────────────────────────────────────────────────────────────────
 def analyze_delivery_performance() -> str:
-    """Delivery delays, on-time rates, and avg delivery time by month."""
     sql = """
-    SELECT to_char(order_purchase_timestamp, 'YYYY-MM') AS month,
+    SELECT TO_CHAR(order_purchase_timestamp, 'YYYY-MM') AS month,
            COUNT(*) AS total_orders,
            SUM(CASE WHEN order_delivered_customer_date <= order_estimated_delivery_date THEN 1 ELSE 0 END) AS on_time,
-           ROUND(AVG(EXTRACT(DAY FROM (order_delivered_customer_date - order_purchase_timestamp)))::numeric, 1) AS avg_delivery_days,
-           ROUND(AVG(EXTRACT(DAY FROM (order_delivered_customer_date - order_estimated_delivery_date)))::numeric, 1) AS avg_delay_days
-    FROM orders
-    WHERE order_status = 'delivered'
-      AND order_delivered_customer_date IS NOT NULL
+           ROUND(AVG(EXTRACT(DAY FROM (order_delivered_customer_date - order_purchase_timestamp)))::numeric, 1) AS avg_days,
+           ROUND(AVG(EXTRACT(DAY FROM (order_delivered_customer_date - order_estimated_delivery_date)))::numeric, 1) AS avg_delay
+    FROM olist_orders
+    WHERE order_status = 'delivered' AND order_delivered_customer_date IS NOT NULL
     GROUP BY 1 ORDER BY 1
     """
     with _conn() as conn:
@@ -94,16 +89,16 @@ def analyze_delivery_performance() -> str:
             trend = "IMPROVING" if recent["on_time_rate"].iloc[-1] > recent["on_time_rate"].iloc[0] else "DECLINING"
 
             lines = [
-                "[Delivery Performance Analysis]\n",
+                "[Delivery Performance — Olist]\n",
                 f"On-Time Delivery Trend: {trend}",
                 f"Current On-Time Rate: {recent['on_time_rate'].iloc[-1]:.1f}%",
-                f"Avg Delivery Time (recent): {recent['avg_delivery_days'].mean():.1f} days\n",
+                f"Avg Delivery Time (recent): {recent['avg_days'].mean():.1f} days\n",
                 "Monthly Breakdown (last 6):",
             ]
             for _, r in recent.iterrows():
                 lines.append(
                     f"  {r['month']}: On-Time {r['on_time_rate']:.1f}% | "
-                    f"Avg {r['avg_delivery_days']} days | Delay: {r['avg_delay_days']} days"
+                    f"Avg {r['avg_days']} days | Delay: {r['avg_delay']} days"
                 )
             return "\n".join(lines)
         except Exception as e:
@@ -111,37 +106,23 @@ def analyze_delivery_performance() -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. Customer Behavior Analysis
+# 3. Customer Behavior (Olist)
 # ─────────────────────────────────────────────────────────────────────────────
 def analyze_customer_behavior() -> str:
-    """Repeat purchase rates, new vs returning customers, cohort trends."""
     sql_repeat = """
-    SELECT unique_id, COUNT(DISTINCT order_id) AS order_count
-    FROM customers c JOIN orders o ON c.customer_id = o.customer_id
-    WHERE o.status = 'delivered'
-    GROUP BY 1
-    """
-    sql_monthly = """
-    SELECT to_char(o.purchase_timestamp, 'YYYY-MM') AS month,
-           COUNT(DISTINCT c.unique_id) AS unique_customers,
-           COUNT(DISTINCT o.order_id) AS orders
-    FROM orders o JOIN customers c ON o.customer_id = c.customer_id
-    WHERE o.status = 'delivered'
-    GROUP BY 1 ORDER BY 1
-    """
-    # Note: Column names updated to match Prisma schema
-    sql_repeat = """
-    SELECT unique_id, COUNT(DISTINCT o.order_id) AS order_count
-    FROM customers c JOIN orders o ON c.customer_id = o.customer_id
+    SELECT c.customer_unique_id, COUNT(DISTINCT o.order_id) AS order_count
+    FROM olist_customers c
+    JOIN olist_orders o ON c.customer_id = o.customer_id
     WHERE o.order_status = 'delivered'
     GROUP BY 1
     """
     sql_monthly = """
-    SELECT to_char(o.order_purchase_timestamp, 'YYYY-MM') AS month,
+    SELECT TO_CHAR(o.order_purchase_timestamp, 'YYYY-MM') AS month,
            COUNT(DISTINCT c.customer_unique_id) AS unique_customers,
            COUNT(DISTINCT o.order_id) AS orders
-    FROM orders o JOIN customers c ON o.customer_id = c.customer_id
-    WHERE o.order_status = 'delivered'
+    FROM olist_orders o
+    JOIN olist_customers c ON o.customer_id = c.customer_id
+    WHERE o.order_status = 'delivered' AND o.order_purchase_timestamp IS NOT NULL
     GROUP BY 1 ORDER BY 1
     """
     with _conn() as conn:
@@ -158,7 +139,7 @@ def analyze_customer_behavior() -> str:
             cust_trend = "GROWING" if recent["unique_customers"].iloc[-1] > recent["unique_customers"].iloc[0] else "DECLINING"
 
             lines = [
-                "[Customer Behavior Analysis]\n",
+                "[Customer Behavior — Olist]\n",
                 f"Total Unique Customers: {total:,}",
                 f"One-Time Buyers: {one_time:,} ({one_time/total*100:.1f}%)",
                 f"Repeat Buyers: {repeat:,} ({repeat_rate:.1f}%)",
@@ -169,23 +150,23 @@ def analyze_customer_behavior() -> str:
                 lines.append(f"  {r['month']}: {int(r['unique_customers']):,} customers | {int(r['orders']):,} orders")
 
             return "\n".join(lines)
-        finally:
-            pass
+        except Exception as e:
+            return f"Error analyzing customers: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. Review Score Analysis
+# 4. Review Score Analysis (Olist)
 # ─────────────────────────────────────────────────────────────────────────────
 def analyze_review_scores() -> str:
-    """Review score distribution and trends by month."""
     sql = """
-    SELECT to_char(o.order_purchase_timestamp, 'YYYY-MM') AS month,
+    SELECT TO_CHAR(o.order_purchase_timestamp, 'YYYY-MM') AS month,
            ROUND(AVG(r.review_score)::numeric, 2) AS avg_score,
            COUNT(*) AS review_count,
            SUM(CASE WHEN r.review_score <= 2 THEN 1 ELSE 0 END) AS low_reviews,
            SUM(CASE WHEN r.review_score >= 4 THEN 1 ELSE 0 END) AS high_reviews
-    FROM order_reviews r
-    JOIN orders o ON r.order_id = o.order_id
+    FROM olist_order_reviews r
+    JOIN olist_orders o ON r.order_id = o.order_id
+    WHERE r.review_score IS NOT NULL
     GROUP BY 1 ORDER BY 1
     """
     with _conn() as conn:
@@ -199,7 +180,7 @@ def analyze_review_scores() -> str:
             trend = "IMPROVING" if recent["avg_score"].iloc[-1] > recent["avg_score"].iloc[0] else "DECLINING"
 
             lines = [
-                "[Review Score Analysis]\n",
+                "[Review Score Analysis — Olist]\n",
                 f"Score Trend: {trend}",
                 f"Current Avg Score: {recent['avg_score'].iloc[-1]}/5",
                 f"Low Review Rate (≤2 stars): {recent['low_pct'].mean():.1f}%\n",
@@ -209,25 +190,24 @@ def analyze_review_scores() -> str:
                 lines.append(f"  {r['month']}: Avg {r['avg_score']}/5 | Low: {r['low_pct']:.1f}% | Reviews: {int(r['review_count'])}")
 
             return "\n".join(lines)
-        finally:
-            pass
+        except Exception as e:
+            return f"Error analyzing reviews: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Category Performance Analysis
+# 5. Category Performance (Olist)
 # ─────────────────────────────────────────────────────────────────────────────
 def analyze_category_performance() -> str:
-    """Top and bottom product categories by revenue and growth."""
     sql = """
-    SELECT t.product_category_name_english AS category,
+    SELECT t.category_name_en AS category,
            ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue,
            COUNT(DISTINCT oi.order_id) AS orders,
            ROUND(AVG(r.review_score)::numeric, 2) AS avg_review
-    FROM order_items oi
-    JOIN products p ON oi.product_id = p.product_id
-    JOIN product_category_name_translation t ON p.product_category_name = t.product_category_name
-    JOIN orders o ON oi.order_id = o.order_id
-    LEFT JOIN order_reviews r ON o.order_id = r.order_id
+    FROM olist_order_items oi
+    JOIN olist_orders o ON oi.order_id = o.order_id
+    JOIN olist_products p ON oi.product_id = p.product_id
+    LEFT JOIN olist_product_category_translation t ON p.category_name_pt = t.category_name_pt
+    LEFT JOIN olist_order_reviews r ON o.order_id = r.order_id
     WHERE o.order_status = 'delivered'
     GROUP BY 1
     HAVING COUNT(DISTINCT oi.order_id) >= 10
@@ -242,7 +222,7 @@ def analyze_category_performance() -> str:
             top5 = df.head(5)
             bottom5 = df.tail(5)
 
-            lines = ["[Category Performance Analysis]\n", "Top 5 Categories by Revenue:"]
+            lines = ["[Category Performance — Olist]\nTop 5 Categories by Revenue:"]
             for _, r in top5.iterrows():
                 lines.append(f"  {r['category']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | Review: {r['avg_review']}/5")
 
@@ -251,27 +231,27 @@ def analyze_category_performance() -> str:
                 lines.append(f"  {r['category']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | Review: {r['avg_review']}/5")
 
             return "\n".join(lines)
-        finally:
-            pass
+        except Exception as e:
+            return f"Error analyzing categories: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 6. Seller Performance Analysis
+# 6. Seller Performance (Olist)
 # ─────────────────────────────────────────────────────────────────────────────
 def analyze_seller_performance() -> str:
-    """Seller distribution, top sellers, and delivery impact."""
     sql = """
-    SELECT s.seller_id,
+    SELECT s.seller_id, s.city, s.state,
            COUNT(DISTINCT oi.order_id) AS orders,
            ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue,
-           ROUND(AVG(EXTRACT(DAY FROM (o.order_delivered_customer_date - o.order_purchase_timestamp)))::numeric, 1) AS avg_delivery_days
-    FROM sellers s
-    JOIN order_items oi ON s.seller_id = oi.seller_id
-    JOIN orders o ON oi.order_id = o.order_id
+           ROUND(AVG(EXTRACT(DAY FROM (o.order_delivered_customer_date - o.order_purchase_timestamp)))::numeric, 1) AS avg_days
+    FROM olist_sellers s
+    JOIN olist_order_items oi ON s.seller_id = oi.seller_id
+    JOIN olist_orders o ON oi.order_id = o.order_id
     WHERE o.order_status = 'delivered' AND o.order_delivered_customer_date IS NOT NULL
-    GROUP BY 1
+    GROUP BY 1, 2, 3
     HAVING COUNT(DISTINCT oi.order_id) >= 5
     ORDER BY revenue DESC
+    LIMIT 20
     """
     with _conn() as conn:
         try:
@@ -283,26 +263,242 @@ def analyze_seller_performance() -> str:
             top10_rev = df.head(10)["revenue"].sum()
             total_rev = df["revenue"].sum()
             concentration = (top10_rev / total_rev * 100) if total_rev > 0 else 0
-
-            slow = df[df["avg_delivery_days"] > df["avg_delivery_days"].quantile(0.75)]
+            slow = df[df["avg_days"] > df["avg_days"].quantile(0.75)]
 
             lines = [
-                "[Seller Performance Analysis]\n",
+                "[Seller Performance — Olist]\n",
                 f"Active Sellers (≥5 orders): {total_sellers}",
                 f"Top 10 Sellers Revenue Share: {concentration:.1f}%",
-                f"Avg Delivery Time: {df['avg_delivery_days'].mean():.1f} days",
-                f"Slow Sellers (>75th pctl): {len(slow)} sellers, avg {slow['avg_delivery_days'].mean():.1f} days",
+                f"Avg Delivery Time: {df['avg_days'].mean():.1f} days",
+                f"Slow Sellers (>75th pctl): {len(slow)} sellers, avg {slow['avg_days'].mean():.1f} days\n",
+                "Top 10 Sellers:",
             ]
+            for _, r in df.head(10).iterrows():
+                loc = f"{r['city']}, {r['state']}" if r['city'] else '—'
+                lines.append(f"  {r['seller_id'][:12]}... ({loc}): R${r['revenue']:,.2f} | {int(r['orders'])} orders")
+
             return "\n".join(lines)
-        finally:
-            pass
+        except Exception as e:
+            return f"Error analyzing sellers: {str(e)}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Root Cause Aggregator
+# 7. Geographic Distribution (Olist)
+# ─────────────────────────────────────────────────────────────────────────────
+def analyze_geographic_distribution() -> str:
+    sql = """
+    SELECT c.state,
+           COUNT(DISTINCT o.order_id) AS orders,
+           ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue,
+           ROUND(AVG(r.review_score)::numeric, 2) AS avg_review
+    FROM olist_customers c
+    JOIN olist_orders o ON c.customer_id = o.customer_id
+    JOIN olist_order_items oi ON o.order_id = oi.order_id
+    LEFT JOIN olist_order_reviews r ON o.order_id = r.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY 1 ORDER BY revenue DESC
+    LIMIT 10
+    """
+    with _conn() as conn:
+        try:
+            df = pd.read_sql_query(text(sql), conn)
+            if df.empty:
+                return "No geographic data."
+
+            lines = ["[Geographic Distribution — Olist Top 10 States]\n"]
+            for _, r in df.iterrows():
+                lines.append(f"  {r['state']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | Review: {r['avg_review']}/5")
+
+            top3_share = (df.head(3)["revenue"].sum() / df["revenue"].sum() * 100) if not df.empty else 0
+            lines.append(f"\nTop 3 states account for {top3_share:.1f}% of revenue.")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error analyzing geography: {str(e)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. Market Basket Analysis (Olist)
+# ─────────────────────────────────────────────────────────────────────────────
+def analyze_market_basket() -> str:
+    sql = """
+    SELECT t1.category_name_en AS cat1,
+           t2.category_name_en AS cat2,
+           COUNT(*) AS frequency
+    FROM olist_order_items oi1
+    JOIN olist_order_items oi2 ON oi1.order_id = oi2.order_id AND oi1.product_id < oi2.product_id
+    JOIN olist_products p1 ON oi1.product_id = p1.product_id
+    JOIN olist_products p2 ON oi2.product_id = p2.product_id
+    JOIN olist_product_category_translation t1 ON p1.category_name_pt = t1.category_name_pt
+    JOIN olist_product_category_translation t2 ON p2.category_name_pt = t2.category_name_pt
+    GROUP BY 1, 2
+    ORDER BY frequency DESC
+    LIMIT 10
+    """
+    with _conn() as conn:
+        try:
+            df = pd.read_sql_query(text(sql), conn)
+            if df.empty:
+                return "No cross-category purchase patterns found."
+
+            lines = ["[Market Basket Analysis — Olist Category Pairs]\n"]
+            for _, r in df.iterrows():
+                lines.append(f"  {r['cat1']} + {r['cat2']}: {r['frequency']} times")
+
+            lines.append("\nInsight: Use these pairs for 'Frequently Bought Together' recommendations.")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error in market basket: {str(e)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. CLV by Segment (Olist)
+# ─────────────────────────────────────────────────────────────────────────────
+def estimate_clv_by_segment() -> str:
+    sql = """
+    SELECT c.customer_unique_id,
+           COUNT(DISTINCT o.order_id) AS frequency,
+           SUM(oi.price + oi.freight_value) AS total_spent
+    FROM olist_customers c
+    JOIN olist_orders o ON c.customer_id = o.customer_id
+    JOIN olist_order_items oi ON o.order_id = oi.order_id
+    WHERE o.order_status = 'delivered'
+    GROUP BY 1
+    """
+    with _conn() as conn:
+        try:
+            df = pd.read_sql_query(text(sql), conn)
+            if df.empty:
+                return "No CLV data available."
+
+            df['total_spent'] = df['total_spent'].astype(float)
+            df['segment'] = pd.qcut(df['total_spent'], 4, labels=['Low-Value', 'Mid-Value', 'High-Value', 'Top-Tier'])
+
+            clv_stats = df.groupby('segment').agg({
+                'customer_unique_id': 'count',
+                'total_spent': 'mean',
+                'frequency': 'mean'
+            }).rename(columns={'customer_unique_id': 'n_customers', 'total_spent': 'avg_clv', 'frequency': 'avg_freq'})
+
+            lines = ["[Estimated CLV by Segment — Olist Historical]\n"]
+            for seg, r in clv_stats.iterrows():
+                lines.append(
+                    f"  {seg:<12} | Customers: {int(r['n_customers']):>5} | "
+                    f"Avg CLV: R${r['avg_clv']:>7.2f} | Avg Freq: {r['avg_freq']:.2f}"
+                )
+
+            overall_avg = df['total_spent'].mean()
+            lines.append(f"\nOverall Marketplace Avg CLV: R${overall_avg:.2f}")
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error estimating CLV: {str(e)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. Order Cancellation Analysis (Olist)
+# ─────────────────────────────────────────────────────────────────────────────
+def analyze_order_cancellation() -> str:
+    sql = """
+    SELECT order_status, COUNT(*) AS order_count,
+           TO_CHAR(order_purchase_timestamp, 'YYYY-MM') AS month
+    FROM olist_orders
+    WHERE order_purchase_timestamp IS NOT NULL
+    GROUP BY 1, 3
+    ORDER BY 3, 2
+    """
+    with _conn() as conn:
+        try:
+            df = pd.read_sql_query(text(sql), conn)
+            if df.empty:
+                return "No cancellation data."
+
+            pivot = df.pivot(index='month', columns='order_status', values='order_count').fillna(0)
+            if 'canceled' not in pivot.columns:
+                return "No canceled orders found."
+
+            pivot['total'] = pivot.sum(axis=1)
+            pivot['cancel_rate'] = (pivot['canceled'] / pivot['total'] * 100).round(2)
+
+            recent = pivot.tail(6)
+            avg_rate = recent['cancel_rate'].mean()
+
+            lines = ["[Order Cancellation — Olist]\n"]
+            lines.append(f"Avg Recent Cancellation Rate: {avg_rate:.2f}%")
+            lines.append("Monthly Cancellation Trend:")
+            for m, r in recent.iterrows():
+                total = int(r['total'])
+                canceled = int(r.get('canceled', 0))
+                rate = r.get('cancel_rate', 0)
+                lines.append(f"  {m}: {canceled} canceled / {total} total ({rate:.2f}%)")
+
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error analyzing cancellations: {str(e)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 11. Online Retail Overview (UK)
+# ─────────────────────────────────────────────────────────────────────────────
+def analyze_online_retail_overview() -> str:
+    sql_summary = """
+    SELECT COUNT(DISTINCT ri.customerid) AS customers,
+           COUNT(DISTINCT ri.invoiceno) AS invoices,
+           SUM(rii.quantity) AS units_sold,
+           SUM(rii.totalprice) AS total_revenue
+    FROM retail_invoices ri
+    JOIN retail_invoice_items rii ON ri.invoiceno = rii.invoiceno
+    WHERE ri.is_cancellation = FALSE
+    """
+    sql_monthly = """
+    SELECT TO_CHAR(ri.invoicedate, 'YYYY-MM') AS month,
+           SUM(rii.totalprice) AS revenue,
+           COUNT(DISTINCT ri.invoiceno) AS invoices
+    FROM retail_invoices ri
+    JOIN retail_invoice_items rii ON ri.invoiceno = rii.invoiceno
+    WHERE ri.is_cancellation = FALSE AND ri.invoicedate IS NOT NULL
+    GROUP BY 1 ORDER BY 1
+    """
+    sql_country = """
+    SELECT rc.country, COUNT(DISTINCT ri.invoiceno) AS invoices, SUM(rii.totalprice) AS revenue
+    FROM retail_invoices ri
+    JOIN retail_invoice_items rii ON ri.invoiceno = rii.invoiceno
+    JOIN retail_customers rc ON ri.customerid = rc.customerid
+    WHERE ri.is_cancellation = FALSE
+    GROUP BY 1 ORDER BY 3 DESC LIMIT 10
+    """
+    with _conn() as conn:
+        try:
+            df_sum = pd.read_sql_query(text(sql_summary), conn)
+            df_month = pd.read_sql_query(text(sql_monthly), conn)
+            df_country = pd.read_sql_query(text(sql_country), conn)
+
+            r = df_sum.iloc[0]
+
+            lines = [
+                "[Online Retail Overview — UK Dataset]\n",
+                f"Total Customers: {int(r['customers']):,}",
+                f"Total Invoices: {int(r['invoices']):,}",
+                f"Units Sold: {int(r['units_sold']):,}",
+                f"Total Revenue: £{float(r['total_revenue']):,.2f}\n",
+                "Top 10 Countries by Revenue:",
+            ]
+            for _, row in df_country.iterrows():
+                lines.append(f"  {row['country']}: £{float(row['revenue']):,.2f} | {int(row['invoices'])} invoices")
+
+            if not df_month.empty:
+                recent = df_month.tail(6)
+                lines.append("\nMonthly Revenue (last 6):")
+                for _, row in recent.iterrows():
+                    lines.append(f"  {row['month']}: £{float(row['revenue']):,.2f} | {int(row['invoices'])} invoices")
+
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Error analyzing retail: {str(e)}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 12. Root Cause Aggregator
 # ─────────────────────────────────────────────────────────────────────────────
 def investigate_root_causes(topic: str = "general") -> str:
-    """Run multiple analyses and aggregate findings for root-cause investigation."""
     sections = []
 
     if topic in ("general", "revenue", "sales"):
@@ -317,8 +513,10 @@ def investigate_root_causes(topic: str = "general") -> str:
         sections.append(analyze_customer_behavior())
         sections.append(analyze_review_scores())
 
-    if topic in ("general",):
-        sections.append(analyze_review_scores())
+    if topic in ("general", "retail", "uk"):
+        sections.append(analyze_online_retail_overview())
+
+    sections.append(analyze_order_cancellation())
 
     # Deduplicate
     seen = set()
@@ -333,175 +531,7 @@ def investigate_root_causes(topic: str = "general") -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Geographic Analysis
-# ─────────────────────────────────────────────────────────────────────────────
-def analyze_geographic_distribution() -> str:
-    """Revenue and order distribution by state."""
-    sql = """
-    SELECT c.customer_state AS state,
-           COUNT(DISTINCT o.order_id) AS orders,
-           ROUND(SUM(oi.price + oi.freight_value), 2) AS revenue,
-           ROUND(AVG(r.review_score)::numeric, 2) AS avg_review
-    FROM customers c
-    JOIN orders o ON c.customer_id = o.customer_id
-    JOIN order_items oi ON o.order_id = oi.order_id
-    LEFT JOIN order_reviews r ON o.order_id = r.order_id
-    WHERE o.order_status = 'delivered'
-    GROUP BY 1 ORDER BY revenue DESC
-    LIMIT 10
-    """
-    with _conn() as conn:
-        try:
-            df = pd.read_sql_query(text(sql), conn)
-            if df.empty:
-                return "No geographic data."
-
-            lines = ["[Geographic Distribution — Top 10 States]\n"]
-            for _, r in df.iterrows():
-                lines.append(f"  {r['state']}: R${r['revenue']:,.2f} | Orders: {int(r['orders'])} | Review: {r['avg_review']}/5")
-
-            top3_share = (df.head(3)["revenue"].sum() / df["revenue"].sum() * 100) if not df.empty else 0
-            lines.append(f"\nTop 3 states account for {top3_share:.1f}% of revenue.")
-            return "\n".join(lines)
-        finally:
-            pass
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 10. Market Basket Analysis (Category Correlations)
-# ─────────────────────────────────────────────────────────────────────────────
-def analyze_market_basket() -> str:
-    """Identify top product category pairs frequently bought together in the same order."""
-    sql = """
-    SELECT t1.product_category_name_english AS cat1,
-           t2.product_category_name_english AS cat2,
-           COUNT(*) AS frequency
-    FROM order_items oi1
-    JOIN order_items oi2 ON oi1.order_id = oi2.order_id AND oi1.product_id < oi2.product_id
-    JOIN products p1 ON oi1.product_id = p1.id
-    JOIN products p2 ON oi2.product_id = p2.id
-    JOIN product_category_name_translation t1 ON p1.product_category_name = t1.product_category_name
-    JOIN product_category_name_translation t2 ON p2.product_category_name = t2.product_category_name
-    GROUP BY 1, 2
-    ORDER BY frequency DESC
-    LIMIT 10
-    """
-    # Note: Using join on categories table instead of translation since we have it in Prisma
-    sql = """
-    SELECT c1.name AS cat1,
-           c2.name AS cat2,
-           COUNT(*) AS frequency
-    FROM order_items oi1
-    JOIN order_items oi2 ON oi1.order_id = oi2.order_id AND oi1.product_id < oi2.product_id
-    JOIN products p1 ON oi1.product_id = p1.id
-    JOIN products p2 ON oi2.product_id = p2.id
-    JOIN categories c1 ON p1.category_id = c1.id
-    JOIN categories c2 ON p2.category_id = c2.id
-    GROUP BY 1, 2
-    ORDER BY frequency DESC
-    LIMIT 10
-    """
-    with _conn() as conn:
-        try:
-            df = pd.read_sql_query(text(sql), conn)
-            if df.empty:
-                return "No cross-category purchase patterns found."
-
-            lines = ["[Market Basket Analysis — Top Category Pairs]\n"]
-            for _, r in df.iterrows():
-                lines.append(f"  {r['cat1']} + {r['cat2']} : {r['frequency']} times")
-            
-            lines.append("\nInsight: Use these pairs for 'Frequently Bought Together' recommendations.")
-            return "\n".join(lines)
-        finally:
-            pass
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 11. Customer Lifetime Value (CLV) by Segment
-# ─────────────────────────────────────────────────────────────────────────────
-def estimate_clv_by_segment() -> str:
-    """Estimate historical CLV based on total spend and order frequency."""
-    sql = """
-    SELECT customer_unique_id,
-           COUNT(DISTINCT o.order_id) AS frequency,
-           SUM(price + freight_value) AS total_spent
-    FROM orders o
-    JOIN customers c ON o.customer_id = c.customer_id
-    JOIN order_items oi ON o.order_id = oi.order_id
-    WHERE o.order_status = 'delivered'
-    GROUP BY 1
-    """
-    with _conn() as conn:
-        try:
-            df = pd.read_sql_query(text(sql), conn)
-            if df.empty:
-                return "No CLV data available."
-
-            # Simplistic segmentation based on quantiles
-            df['segment'] = pd.qcut(df['total_spent'].astype(float), 4, labels=['Low-Value', 'Mid-Value', 'High-Value', 'Top-Tier'])
-            
-            clv_stats = df.groupby('segment').agg({
-                'customer_unique_id': 'count',
-                'total_spent': 'mean',
-                'frequency': 'mean'
-            }).rename(columns={'customer_unique_id': 'n_customers', 'total_spent': 'avg_clv', 'frequency': 'avg_freq'})
-
-            lines = ["[Estimated CLV by Segment — Historical Basis]\n"]
-            for seg, r in clv_stats.iterrows():
-                lines.append(
-                    f"  {seg:<12} | Customers: {int(r['n_customers']):>5} | "
-                    f"Avg CLV: R${r['avg_clv']:>7.2f} | Avg Freq: {r['avg_freq']:.2f}"
-                )
-            
-            overall_avg = df['total_spent'].astype(float).mean()
-            lines.append(f"\nOverall Marketplace Avg CLV: R${overall_avg:.2f}")
-            return "\n".join(lines)
-        finally:
-            pass
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 12. Order Cancellation Analysis
-# ─────────────────────────────────────────────────────────────────────────────
-def analyze_order_cancellation() -> str:
-    """Analyze cancellation rates and potential revenue loss."""
-    sql = """
-    SELECT order_status,
-           COUNT(*) AS order_count,
-           to_char(order_purchase_timestamp, 'YYYY-MM') AS month
-    FROM orders
-    GROUP BY 1, 3
-    """
-    with _conn() as conn:
-        try:
-            df = pd.read_sql_query(text(sql), conn)
-            if df.empty:
-                return "No cancellation data."
-
-            pivot = df.pivot(index='month', columns='order_status', values='order_count').fillna(0)
-            if 'canceled' not in pivot.columns:
-                return "No canceled orders found in data."
-                
-            pivot['total'] = pivot.sum(axis=1)
-            pivot['cancel_rate'] = (pivot['canceled'] / pivot['total'] * 100).round(2)
-            
-            recent = pivot.tail(6)
-            avg_rate = recent['cancel_rate'].mean()
-
-            lines = ["[Order Cancellation Analysis]\n"]
-            lines.append(f"Avg Recent Cancellation Rate: {avg_rate:.2f}%")
-            lines.append("Monthly Cancellation Trend:")
-            for m, r in recent.iterrows():
-                lines.append(f"  {m}: {r['canceled']:.0f} canceled / {r['total']:.0f} total ({r['cancel_rate']:.2f}%)")
-                
-            return "\n".join(lines)
-        finally:
-            pass
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Tool Registry (for planner to select from)
+# Tool Registry
 # ─────────────────────────────────────────────────────────────────────────────
 ANALYTICAL_TOOLS = {
     "analyze_revenue_trends": {
@@ -542,7 +572,7 @@ ANALYTICAL_TOOLS = {
     "analyze_market_basket": {
         "fn": analyze_market_basket,
         "description": "Cross-selling patterns and category correlations",
-        "topics": ["cross-sell", "market basket", "recommendations", "association"],
+        "topics": ["cross-sell", "market basket", "recommendations"],
     },
     "estimate_clv_by_segment": {
         "fn": estimate_clv_by_segment,
@@ -553,6 +583,11 @@ ANALYTICAL_TOOLS = {
         "fn": analyze_order_cancellation,
         "description": "Order cancellation rates and revenue leakage",
         "topics": ["cancellations", "leakage", "returns", "issues"],
+    },
+    "analyze_online_retail_overview": {
+        "fn": analyze_online_retail_overview,
+        "description": "Online Retail UK dataset overview — customers, revenue, countries",
+        "topics": ["retail", "uk", "online retail", "england"],
     },
     "investigate_root_causes": {
         "fn": investigate_root_causes,

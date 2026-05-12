@@ -14,7 +14,6 @@ const NAV_ITEMS = [
 const OPS_ITEMS = [
   { to: '/inventory',      icon: '📦', label: 'Inventory & Products' },
   { to: '/purchase-orders',icon: '🛒', label: 'Purchase Orders' },
-  { to: '/suppliers',      icon: '🏢', label: 'Suppliers' },
 ]
 
 export default function Sidebar() {

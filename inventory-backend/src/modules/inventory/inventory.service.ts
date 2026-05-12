@@ -4,8 +4,159 @@ import { NotFoundError, InsufficientStockError, ValidationError } from '../../sh
 import { MovementType, Prisma } from '@prisma/client';
 import { parsePagination } from '../../shared/utils/response';
 
+// ─── Unified Inventory View ─────────────────────────────────────────────────
+
+type UnifiedInventoryItem = {
+  source: 'retail' | 'olist' | 'operational';
+  productId: string;
+  sku: string | null;
+  stockcode: string | null;
+  name: string;
+  description: string | null;
+  quantity: number | null;
+  basePrice: number | null;
+  latestUnitPrice: number | null;
+  category: string | null;
+  supplier: string | null;
+  lastRestockAt: Date | null;
+  lastSoldAt: Date | null;
+  updatedAt: Date | null;
+};
+
 export class InventoryService {
-  // ─── List all inventory with product details ────────────────────────────
+  // ─── Complete Inventory View ─────────────────────────────────────────────
+  async getCompleteInventory(query: Record<string, any> = {}) {
+    const { page, limit } = parsePagination(query);
+    const skip = (page - 1) * limit;
+
+    const search = query.search as string | undefined;
+    const source = query.source as string | undefined;
+
+    // Get operational inventory products
+    const operationalProducts = await prisma.product.findMany({
+      where: search
+        ? {
+            OR: [
+              { sku: { contains: search, mode: 'insensitive' } },
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }
+        : undefined,
+      include: {
+        inventory: true,
+        category: { select: { name: true } },
+        supplier: { select: { name: true } },
+      },
+    });
+
+    // Get Online Retail products (without inventory tracking)
+    let retailProducts: any[] = [];
+    if (!source || source === 'retail' || source === 'all') {
+      retailProducts = await prisma.retailProduct.findMany({
+        where: search
+          ? {
+              OR: [
+                { stockcode: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }
+          : undefined,
+        orderBy: { stockcode: 'asc' },
+      });
+    }
+
+    // Get Olist products (without inventory tracking)
+    let olistProducts: any[] = [];
+    if (!source || source === 'olist' || source === 'all') {
+      olistProducts = await prisma.olistProduct.findMany({
+        where: search
+          ? { categoryNamePt: { contains: search, mode: 'insensitive' } }
+          : undefined,
+        orderBy: { productId: 'asc' },
+      });
+    }
+
+    // Transform to unified format
+    const items: UnifiedInventoryItem[] = [];
+
+    // Operational products
+    for (const p of operationalProducts) {
+      if (source && source !== 'operational' && source !== 'all') continue;
+      items.push({
+        source: 'operational',
+        productId: p.id,
+        sku: p.sku,
+        stockcode: null,
+        name: p.name,
+        description: p.description,
+        quantity: p.inventory?.quantity ?? null,
+        basePrice: p.basePrice ? Number(p.basePrice) : null,
+        latestUnitPrice: null,
+        category: p.category?.name ?? null,
+        supplier: p.supplier?.name ?? null,
+        lastRestockAt: p.inventory?.lastRestockAt ?? null,
+        lastSoldAt: p.inventory?.lastSoldAt ?? null,
+        updatedAt: p.inventory?.updatedAt ?? null,
+      });
+    }
+
+    // Retail products
+    for (const p of retailProducts) {
+      items.push({
+        source: 'retail',
+        productId: p.stockcode,
+        sku: null,
+        stockcode: p.stockcode,
+        name: p.description || p.stockcode,
+        description: p.description,
+        quantity: null,
+        basePrice: null,
+        latestUnitPrice: p.latestUnitPrice ? Number(p.latestUnitPrice) : null,
+        category: null,
+        supplier: null,
+        lastRestockAt: null,
+        lastSoldAt: null,
+        updatedAt: null,
+      });
+    }
+
+    // Olist products
+    for (const p of olistProducts) {
+      items.push({
+        source: 'olist',
+        productId: p.productId,
+        sku: null,
+        stockcode: null,
+        name: p.categoryNamePt || p.productId,
+        description: null,
+        quantity: null,
+        basePrice: null,
+        latestUnitPrice: null,
+        category: p.categoryNamePt,
+        supplier: null,
+        lastRestockAt: null,
+        lastSoldAt: null,
+        updatedAt: null,
+      });
+    }
+
+    // Sort by source then by name
+    items.sort((a, b) => {
+      if (a.source !== b.source) {
+        const order = { operational: 0, retail: 1, olist: 2 };
+        return order[a.source] - order[b.source];
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    const total = items.length;
+    const paginatedItems = items.slice(skip, skip + limit);
+
+    return { items: paginatedItems, total, page, limit };
+  }
+
+  // ─── Operational Inventory List ──────────────────────────────────────────
   async findAll(query: Record<string, any>) {
     const { page, limit } = parsePagination(query);
     const skip = (page - 1) * limit;
@@ -55,7 +206,6 @@ export class InventoryService {
   // ─── ADD STOCK (transactional) ──────────────────────────────────────────
   async addStock(input: AddStockInput, userId: string) {
     return prisma.$transaction(async (tx) => {
-      // Lock the inventory row
       const inventory = await tx.inventory.findUnique({
         where: { productId: input.productId },
       });
@@ -64,8 +214,7 @@ export class InventoryService {
       const quantityBefore = inventory.quantity;
       const quantityAfter = quantityBefore + input.quantity;
 
-      // Update inventory
-      const updated = await tx.inventory.update({
+      await tx.inventory.update({
         where: { productId: input.productId },
         data: {
           quantity: quantityAfter,
@@ -73,7 +222,6 @@ export class InventoryService {
         },
       });
 
-      // Record movement
       await tx.stockMovement.create({
         data: {
           productId: input.productId,
@@ -115,7 +263,7 @@ export class InventoryService {
       const quantityBefore = inventory.quantity;
       const quantityAfter = quantityBefore - input.quantity;
 
-      const updated = await tx.inventory.update({
+      await tx.inventory.update({
         where: { productId: input.productId },
         data: {
           quantity: quantityAfter,
@@ -233,7 +381,7 @@ export class InventoryService {
       supplier_name: string | null;
       category_name: string | null;
     }>>`
-      SELECT 
+      SELECT
         p.id as product_id, p.sku, p.name,
         i.quantity, i.reserved_qty,
         p.reorder_point, p.reorder_qty,
@@ -257,6 +405,28 @@ export class InventoryService {
       },
       severity: a.quantity === 0 ? 'critical' : a.quantity <= Math.floor(a.reorder_point / 2) ? 'high' : 'medium',
     }));
+  }
+
+  // ─── Inventory Stats ────────────────────────────────────────────────────
+  async getStats() {
+    const [operationalCount, retailCount, olistCount, lowStockCount] = await Promise.all([
+      prisma.product.count(),
+      prisma.retailProduct.count(),
+      prisma.olistProduct.count(),
+      prisma.$queryRaw<Array<{ count: BigInt }>>`
+        SELECT COUNT(*) as count FROM products p
+        JOIN inventory i ON i.product_id = p.id
+        WHERE p.status = 'active' AND i.quantity <= p.reorder_point
+      `,
+    ]);
+
+    return {
+      operational: operationalCount,
+      retail: retailCount,
+      olist: olistCount,
+      total: operationalCount + retailCount + olistCount,
+      lowStockAlerts: Number(lowStockCount[0]?.count || 0),
+    };
   }
 }
 

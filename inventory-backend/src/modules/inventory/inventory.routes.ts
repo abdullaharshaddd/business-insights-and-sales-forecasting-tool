@@ -8,12 +8,22 @@ import { sendSuccess, sendPaginated } from '../../shared/utils/response';
 
 const router = Router();
 
-// GET /inventory — List all stock levels
-router.get('/', authenticate, authorize('admin', 'manager', 'staff'),
+// GET /inventory/all — Complete inventory view (all sources)
+router.get('/all', authenticate, authorize('admin', 'manager', 'staff'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { items, total, page, limit } = await inventoryService.findAll(req.query);
+      const { items, total, page, limit } = await inventoryService.getCompleteInventory(req.query);
       sendPaginated(res, items, total, page, limit);
+    } catch (err) { next(err); }
+  }
+);
+
+// GET /inventory/stats — Inventory statistics
+router.get('/stats', authenticate, authorize('admin', 'manager', 'staff'),
+  async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const stats = await inventoryService.getStats();
+      sendSuccess(res, stats);
     } catch (err) { next(err); }
   }
 );
@@ -28,11 +38,22 @@ router.get('/alerts', authenticate, authorize('admin', 'manager', 'staff'),
   }
 );
 
+// GET /inventory — List operational inventory stock levels
+router.get('/', authenticate, authorize('admin', 'manager', 'staff'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { items, total, page, limit } = await inventoryService.findAll(req.query);
+      sendPaginated(res, items, total, page, limit);
+    } catch (err) { next(err); }
+  }
+);
+
 // GET /inventory/:productId — Stock for a specific product
 router.get('/:productId', authenticate, authorize('admin', 'manager', 'staff'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const inventory = await inventoryService.findByProductId(req.params.productId);
+      const productId = req.params.productId as string;
+      const inventory = await inventoryService.findByProductId(productId);
       sendSuccess(res, inventory);
     } catch (err) { next(err); }
   }
@@ -75,8 +96,9 @@ router.post('/adjust', authenticate, authorize('admin', 'manager'),
 router.get('/movements/:productId', authenticate, authorize('admin', 'manager', 'staff'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const productId = req.params.productId as string;
       const { movements, total, page, limit } = await inventoryService.getMovements(
-        req.params.productId, req.query
+        productId, req.query
       );
       sendPaginated(res, movements, total, page, limit);
     } catch (err) { next(err); }

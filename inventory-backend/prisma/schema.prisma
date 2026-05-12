@@ -53,14 +53,201 @@ model User {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  stockMovements StockMovement[]
-  purchaseOrders PurchaseOrder[]
-  auditLogs      AuditLog[]
+  stockMovements    StockMovement[]
+  purchaseOrders    PurchaseOrder[]
+  auditLogs         AuditLog[]
 
   @@map("users")
 }
 
-// ─── Categories ─────────────────────────────────────────────────────────────
+// ─── ONLINE RETAIL (UK Gift Retailer) ───────────────────────────────────────
+// Source: data/processed/online_retail_cleaned.csv
+
+model RetailCustomer {
+  customerid String @id @map("customerid")
+  country    String @map("country")
+
+  invoices RetailInvoice[]
+
+  @@map("retail_customers")
+}
+
+model RetailProduct {
+  stockcode       String   @id @map("stockcode")
+  description     String?  @map("description")
+  latestUnitPrice Decimal? @map("latest_unit_price") @db.Decimal(10, 2)
+
+  invoiceItems RetailInvoiceItem[]
+
+  @@map("retail_products")
+}
+
+model RetailInvoice {
+  invoiceno      String   @id @map("invoiceno")
+  customerid     String   @map("customerid")
+  invoicedate    DateTime @map("invoicedate")
+  isCancellation Boolean  @default(false) @map("is_cancellation")
+
+  customer    RetailCustomer     @relation(fields: [customerid], references: [customerid])
+  invoiceItems RetailInvoiceItem[]
+
+  @@map("retail_invoices")
+}
+
+model RetailInvoiceItem {
+  id         Int     @id @default(autoincrement()) @map("id")
+  invoiceno  String  @map("invoiceno")
+  stockcode  String? @map("stockcode")
+  quantity   Int     @map("quantity")
+  unitprice  Decimal @map("unitprice") @db.Decimal(10, 2)
+  totalprice Decimal @map("totalprice") @db.Decimal(12, 2)
+
+  invoice RetailInvoice  @relation(fields: [invoiceno], references: [invoiceno])
+  product RetailProduct? @relation(fields: [stockcode], references: [stockcode])
+
+  @@index([invoiceno], name: "idx_rii_invoiceno")
+  @@index([stockcode], name: "idx_rii_stockcode")
+
+  @@map("retail_invoice_items")
+}
+
+// ─── OLIST (Brazilian E-commerce) ────────────────────────────────────────────
+// Source: data/raw/olist/*.csv
+
+model OlistCategoryTranslation {
+  categoryNamePt String  @id @map("category_name_pt")
+  categoryNameEn String? @map("category_name_en")
+
+  @@map("olist_product_category_translation")
+}
+
+model OlistGeolocation {
+  id            Int     @id @default(autoincrement()) @map("id")
+  zipCodePrefix String  @map("zip_code_prefix")
+  lat           Decimal? @map("lat") @db.Decimal(10, 6)
+  lng           Decimal? @map("lng") @db.Decimal(10, 6)
+  city          String? @map("city")
+  state         String? @map("state")
+
+  @@index([zipCodePrefix], name: "idx_geo_zip")
+
+  @@map("olist_geolocation")
+}
+
+model OlistSeller {
+  sellerId      String  @id @map("seller_id")
+  zipCodePrefix String? @map("zip_code_prefix")
+  city          String? @map("city")
+  state         String? @map("state")
+
+  orderItems OlistOrderItem[]
+
+  @@map("olist_sellers")
+}
+
+model OlistCustomer {
+  customerId       String  @id @map("customer_id")
+  customerUniqueId String  @map("customer_unique_id")
+  zipCodePrefix    String? @map("zip_code_prefix")
+  city             String? @map("city")
+  state            String? @map("state")
+
+  orders OlistOrder[]
+
+  @@index([customerUniqueId], name: "idx_cust_unique_id")
+
+  @@map("olist_customers")
+}
+
+model OlistProduct {
+  productId         String   @id @map("product_id")
+  categoryNamePt   String?  @map("category_name_pt")
+  nameLength       Int?     @map("name_length")
+  descriptionLength Int?    @map("description_length")
+  photosQty        Int?     @map("photos_qty")
+  weightG          Int?     @map("weight_g")
+  lengthCm         Decimal? @map("length_cm") @db.Decimal(8, 2)
+  heightCm         Decimal? @map("height_cm") @db.Decimal(8, 2)
+  widthCm          Decimal? @map("width_cm") @db.Decimal(8, 2)
+
+  orderItems OlistOrderItem[]
+
+  @@map("olist_products")
+}
+
+model OlistOrder {
+  orderId                    String    @id @map("order_id")
+  customerId                 String    @map("customer_id")
+  orderStatus                String    @map("order_status")
+  orderPurchaseTimestamp     DateTime? @map("order_purchase_timestamp")
+  orderApprovedAt            DateTime? @map("order_approved_at")
+  orderDeliveredCarrierDate  DateTime? @map("order_delivered_carrier_date")
+  orderDeliveredCustomerDate DateTime? @map("order_delivered_customer_date")
+  orderEstimatedDeliveryDate DateTime? @map("order_estimated_delivery_date")
+
+  customer OlistCustomer      @relation(fields: [customerId], references: [customerId])
+  items    OlistOrderItem[]
+  payments OlistOrderPayment[]
+  reviews  OlistOrderReview[]
+
+  @@index([customerId], name: "idx_orders_customer_id")
+  @@index([orderPurchaseTimestamp], name: "idx_orders_purchase_ts")
+  @@index([orderStatus], name: "idx_orders_status")
+
+  @@map("olist_orders")
+}
+
+model OlistOrderItem {
+  orderId           String    @map("order_id")
+  orderItemId       Int       @map("order_item_id")
+  productId         String?   @map("product_id")
+  sellerId          String?   @map("seller_id")
+  shippingLimitDate DateTime? @map("shipping_limit_date")
+  price             Decimal?  @map("price") @db.Decimal(10, 2)
+  freightValue      Decimal?  @map("freight_value") @db.Decimal(10, 2)
+
+  order   OlistOrder    @relation(fields: [orderId], references: [orderId])
+  product OlistProduct? @relation(fields: [productId], references: [productId])
+  seller  OlistSeller?  @relation(fields: [sellerId], references: [sellerId])
+
+  @@id([orderId, orderItemId])
+  @@index([productId], name: "idx_items_product_id")
+  @@index([sellerId], name: "idx_items_seller_id")
+
+  @@map("olist_order_items")
+}
+
+model OlistOrderPayment {
+  orderId             String  @map("order_id")
+  paymentSequential   Int     @map("payment_sequential")
+  paymentType         String? @map("payment_type")
+  paymentInstallments Int?    @map("payment_installments")
+  paymentValue        Decimal? @map("payment_value") @db.Decimal(10, 2)
+
+  order OlistOrder @relation(fields: [orderId], references: [orderId])
+
+  @@id([orderId, paymentSequential])
+
+  @@map("olist_order_payments")
+}
+
+model OlistOrderReview {
+  reviewId              String    @id @map("review_id")
+  orderId               String    @map("order_id")
+  reviewScore           Int?      @map("review_score")
+  reviewCommentTitle    String?   @map("review_comment_title")
+  reviewCommentMessage  String?   @map("review_comment_message")
+  reviewCreationDate     DateTime? @map("review_creation_date")
+  reviewAnswerTimestamp DateTime? @map("review_answer_timestamp")
+
+  order OlistOrder @relation(fields: [orderId], references: [orderId])
+
+  @@index([orderId], name: "idx_reviews_order_id")
+
+  @@map("olist_order_reviews")
+}
+
+// ─── UNIFIED INVENTORY MANAGEMENT ────────────────────────────────────────────
 
 model Category {
   id          String   @id @default(uuid())
@@ -81,7 +268,28 @@ model Category {
   @@map("categories")
 }
 
-// ─── Products ───────────────────────────────────────────────────────────────
+model Supplier {
+  id             String  @id @default(uuid())
+  legacySellerId String? @map("legacy_seller_id")
+  name           String
+  email          String?
+  phone          String?
+  contactPerson  String? @map("contact_person")
+  city           String?
+  state          String?
+  zipCode        String? @map("zip_code")
+  paymentTerms   String? @map("payment_terms")
+  leadTimeDays   Int     @default(7) @map("lead_time_days")
+  isActive       Boolean @default(true) @map("is_active")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
 
 model Product {
   id          String        @id @default(uuid())
@@ -98,7 +306,7 @@ model Product {
   basePrice   Decimal @default(0) @map("base_price") @db.Decimal(10, 2)
   costPrice   Decimal? @map("cost_price") @db.Decimal(10, 2)
 
-  // Physical attributes (from Olist)
+  // Physical attributes
   weightG     Decimal? @map("weight_g") @db.Decimal(10, 2)
   lengthCm    Decimal? @map("length_cm") @db.Decimal(10, 2)
   heightCm    Decimal? @map("height_cm") @db.Decimal(10, 2)
@@ -117,7 +325,6 @@ model Product {
   inventory          Inventory?
   stockMovements     StockMovement[]
   purchaseOrderItems PurchaseOrderItem[]
-  orderItems         OrderItem[]
 
   @@index([categoryId])
   @@index([supplierId])
@@ -125,8 +332,6 @@ model Product {
   @@index([sku])
   @@map("products")
 }
-
-// ─── Inventory ──────────────────────────────────────────────────────────────
 
 model Inventory {
   id            String    @id @default(uuid())
@@ -142,8 +347,6 @@ model Inventory {
 
   @@map("inventory")
 }
-
-// ─── Stock Movements ────────────────────────────────────────────────────────
 
 model StockMovement {
   id             String       @id @default(uuid())
@@ -169,34 +372,6 @@ model StockMovement {
   @@map("stock_movements")
 }
 
-// ─── Suppliers ──────────────────────────────────────────────────────────────
-
-model Supplier {
-  id              String  @id @default(uuid())
-  legacySellerId  String? @map("legacy_seller_id")
-  name            String
-  email           String?
-  phone           String?
-  contactPerson   String? @map("contact_person")
-  city            String?
-  state           String?
-  zipCode         String? @map("zip_code")
-  paymentTerms    String? @map("payment_terms")
-  leadTimeDays    Int     @default(7) @map("lead_time_days")
-  isActive        Boolean @default(true) @map("is_active")
-  notes           String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
-  products       Product[]
-  purchaseOrders PurchaseOrder[]
-  orderItems     OrderItem[]
-
-  @@map("suppliers")
-}
-
-// ─── Purchase Orders ────────────────────────────────────────────────────────
-
 model PurchaseOrder {
   id           String              @id @default(uuid())
   poNumber     String              @unique @map("po_number")
@@ -221,13 +396,13 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderItem {
-  id              String @id @default(uuid())
-  purchaseOrderId String @map("purchase_order_id")
-  productId       String @map("product_id")
-  quantityOrdered Int    @map("quantity_ordered")
-  quantityReceived Int   @default(0) @map("quantity_received")
-  unitCost        Decimal @map("unit_cost") @db.Decimal(10, 2)
-  createdAt       DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  purchaseOrderId  String   @map("purchase_order_id")
+  productId        String   @map("product_id")
+  quantityOrdered  Int      @map("quantity_ordered")
+  quantityReceived Int      @default(0) @map("quantity_received")
+  unitCost         Decimal  @map("unit_cost") @db.Decimal(10, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   product       Product       @relation(fields: [productId], references: [id])
@@ -235,7 +410,7 @@ model PurchaseOrderItem {
   @@map("purchase_order_items")
 }
 
-// ─── Audit Logs ─────────────────────────────────────────────────────────────
+// ─── Audit Logs ──────────────────────────────────────────────────────────────
 
 model AuditLog {
   id         String   @id @default(uuid())
@@ -254,116 +429,4 @@ model AuditLog {
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
-}
-
-// ─── Historical Olist Data (Unified) ──────────────────────────────────────
-
-model Customer {
-  id               String  @id @map("customer_id")
-  uniqueId         String  @map("customer_unique_id")
-  zipCodePrefix    Int     @map("customer_zip_code_prefix")
-  city             String  @map("customer_city")
-  state            String  @map("customer_state")
-  
-  orders           Order[]
-
-  @@map("customers")
-}
-
-model Order {
-  id                         String    @id @map("order_id")
-  customerId                 String    @map("customer_id")
-  status                     String    @map("order_status")
-  purchaseTimestamp          DateTime? @map("order_purchase_timestamp")
-  approvedAt                 DateTime? @map("order_approved_at")
-  deliveredCarrierDate       DateTime? @map("order_delivered_carrier_date")
-  deliveredCustomerDate      DateTime? @map("order_delivered_customer_date")
-  estimatedDeliveryDate      DateTime? @map("order_estimated_delivery_date")
-
-  customer                   Customer  @relation(fields: [customerId], references: [id])
-  items                      OrderItem[]
-  payments                   OrderPayment[]
-  reviews                    OrderReview[]
-
-  @@map("orders")
-}
-
-model OrderItem {
-  orderId              String  @map("order_id")
-  orderItemId          Int     @map("order_item_id")
-  productId            String  @map("product_id")
-  sellerId             String  @map("seller_id")
-  shippingLimitDate    DateTime? @map("shipping_limit_date")
-  price                Decimal @db.Decimal(10, 2)
-  freightValue         Decimal @map("freight_value") @db.Decimal(10, 2)
-
-  order                Order   @relation(fields: [orderId], references: [id])
-  product              Product @relation(fields: [productId], references: [id])
-  supplier             Supplier @relation(fields: [sellerId], references: [id])
-
-  @@id([orderId, orderItemId])
-  @@map("order_items")
-}
-
-model OrderPayment {
-  orderId              String  @map("order_id")
-  paymentSequential    Int     @map("payment_sequential")
-  paymentType          String  @map("payment_type")
-  paymentInstallments  Int     @map("payment_installments")
-  paymentValue         Decimal @map("payment_value") @db.Decimal(10, 2)
-
-  order                Order   @relation(fields: [orderId], references: [id])
-
-  @@id([orderId, paymentSequential])
-  @@map("order_payments")
-}
-
-model OrderReview {
-  id                   String  @id @map("review_id")
-  orderId              String  @map("order_id")
-  reviewScore          Int     @map("review_score")
-  reviewCommentTitle   String? @map("review_comment_title")
-  reviewCommentMessage String? @map("review_comment_message")
-  reviewCreationDate   DateTime? @map("review_creation_date")
-  reviewAnswerTimestamp DateTime? @map("review_answer_timestamp")
-
-  order                Order   @relation(fields: [orderId], references: [id])
-
-  @@map("order_reviews")
-}
-
-model Geolocation {
-  zipCodePrefix        Int     @map("geolocation_zip_code_prefix")
-  lat                  Float @map("geolocation_lat")
-  lng                  Float @map("geolocation_lng")
-  city                 String  @map("geolocation_city")
-  state                String  @map("geolocation_state")
-
-  @@id([zipCodePrefix, lat, lng])
-  @@map("geolocation")
-}
-
-// ─── Agent Memory Store (Unified) ────────────────────────────────────────
-
-model Finding {
-  id               Int      @id @default(autoincrement())
-  timestamp        DateTime @default(now())
-  topic            String
-  finding          String   @db.Text
-  source           String   @default("agent")
-  importance       String   @default("normal")
-
-  @@map("findings")
-  @@index([topic])
-}
-
-model ConversationSummary {
-  id               Int      @id @default(autoincrement())
-  timestamp        DateTime @default(now())
-  threadId         String   @map("thread_id")
-  summary          String   @db.Text
-  keyTopics        String?  @map("key_topics") // JSON string
-
-  @@map("conversation_summaries")
-  @@index([threadId])
 }

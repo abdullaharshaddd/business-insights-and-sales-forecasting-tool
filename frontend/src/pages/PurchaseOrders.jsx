@@ -21,10 +21,12 @@ export default function PurchaseOrders() {
     setLoading(true)
     inventoryApi.get('/purchase-orders')
       .then(res => {
-        console.log('Purchase Orders Debug:', res);
-        const list = Array.isArray(res?.data) ? res.data : (res?.data?.orders || []);
-        setOrders(list);
-        setError(null);
+        console.log('Purchase Orders Debug:', res)
+        const list = Array.isArray(res?.data) ? res.data
+                 : Array.isArray(res?.data?.data) ? res.data.data
+                 : []
+        setOrders(list)
+        setError(null)
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))

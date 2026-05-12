@@ -1,0 +1,1 @@
+{"features": ["avg_freight", "total_freight", "unique_customers", "unique_orders", "unique_products", "unique_sellers", "day_of_week", "is_weekend", "month", "quarter", "is_month_end", "sales_lag_1", "sales_lag_7", "sales_lag_30", "sales_rolling_mean_7", "sales_rolling_std_7", "sales_rolling_mean_30"]}

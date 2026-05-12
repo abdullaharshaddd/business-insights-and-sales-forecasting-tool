@@ -149,6 +149,9 @@ export default function Forecasting() {
                     tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                     tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`}
                     width={70}
+                    domain={['dataMin', 'dataMax']}
+                    tickCount={8}
+                    allowDecimals={false}
                   />
                   <Tooltip content={<CustomTooltip />} />
                   {/* CI Band */}

@@ -1,0 +1,13 @@
+{
+    "rmse": 3605.124698806757,
+    "mae": 2976.1377820840185,
+    "r2": 0.9390060704254553,
+    "horizon": "30 days",
+    "best_params": {
+        "n_estimators": 100,
+        "min_samples_split": 5,
+        "min_samples_leaf": 1,
+        "max_features": "log2",
+        "max_depth": 20
+    }
+}

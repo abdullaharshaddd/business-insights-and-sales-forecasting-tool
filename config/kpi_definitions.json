@@ -3,72 +3,215 @@
     "label": "Total Revenue (GMV)",
     "category": "Revenue",
     "description": "Total gross merchandise volume including product price and freight charges.",
-    "sql_formula": "SUM(price + freight_value)",
-    "tables": ["order_items"],
+    "sql_formula": "SELECT SUM(oi.price + oi.freight_value) FROM olist_order_items oi",
+    "tables": ["olist_order_items"],
     "unit": "BRL (R$)"
+  },
+  "revenue_delivered": {
+    "label": "Delivered Revenue",
+    "category": "Revenue",
+    "description": "Total revenue from orders with delivered status.",
+    "sql_formula": "SELECT SUM(oi.price + oi.freight_value) FROM olist_order_items oi JOIN olist_orders o ON oi.order_id = o.order_id WHERE o.order_status = 'delivered'",
+    "tables": ["olist_order_items", "olist_orders"],
+    "unit": "BRL (R$)"
+  },
+  "total_orders": {
+    "label": "Total Orders",
+    "category": "Orders",
+    "description": "Count of all orders in the system.",
+    "sql_formula": "SELECT COUNT(*) FROM olist_orders",
+    "tables": ["olist_orders"],
+    "unit": "Orders"
+  },
+  "delivered_orders": {
+    "label": "Delivered Orders",
+    "category": "Orders",
+    "description": "Count of orders with delivered status.",
+    "sql_formula": "SELECT COUNT(*) FROM olist_orders WHERE order_status = 'delivered'",
+    "tables": ["olist_orders"],
+    "unit": "Orders"
+  },
+  "pending_orders": {
+    "label": "Pending Orders",
+    "category": "Orders",
+    "description": "Orders still being processed (invoiced, processing, shipped).",
+    "sql_formula": "SELECT COUNT(*) FROM olist_orders WHERE order_status IN ('invoiced', 'processing', 'shipped', 'approved')",
+    "tables": ["olist_orders"],
+    "unit": "Orders"
+  },
+  "canceled_orders": {
+    "label": "Canceled Orders",
+    "category": "Orders",
+    "description": "Count of canceled orders.",
+    "sql_formula": "SELECT COUNT(*) FROM olist_orders WHERE order_status = 'canceled'",
+    "tables": ["olist_orders"],
+    "unit": "Orders"
   },
   "aov": {
     "label": "Average Order Value",
     "category": "Revenue",
     "description": "The average amount spent per order.",
-    "sql_formula": "SUM(price + freight_value) / COUNT(DISTINCT order_id)",
-    "tables": ["order_items"],
+    "sql_formula": "SELECT SUM(oi.price + oi.freight_value) / COUNT(DISTINCT oi.order_id) FROM olist_order_items oi",
+    "tables": ["olist_order_items"],
+    "unit": "BRL (R$)"
+  },
+  "aov_delivered": {
+    "label": "Avg Order Value (Delivered)",
+    "category": "Revenue",
+    "description": "Average order value for delivered orders only.",
+    "sql_formula": "SELECT SUM(oi.price + oi.freight_value) / COUNT(DISTINCT oi.order_id) FROM olist_order_items oi JOIN olist_orders o ON oi.order_id = o.order_id WHERE o.order_status = 'delivered'",
+    "tables": ["olist_order_items", "olist_orders"],
     "unit": "BRL (R$)"
   },
   "on_time_delivery_rate": {
     "label": "On-Time Delivery Rate",
     "category": "Logistics",
-    "description": "Percentage of orders delivered to the customer before or on the estimated delivery date.",
-    "sql_formula": "CAST(COUNT(CASE WHEN order_delivered_customer_date <= order_estimated_delivery_date THEN 1 END) AS FLOAT) / COUNT(*) * 100",
-    "tables": ["orders"],
+    "description": "Percentage of orders delivered before or on the estimated delivery date.",
+    "sql_formula": "SELECT CAST(COUNT(CASE WHEN o.order_delivered_customer_date <= o.order_estimated_delivery_date THEN 1 END) AS FLOAT) / NULLIF(COUNT(*), 0) * 100 FROM olist_orders o WHERE o.order_delivered_customer_date IS NOT NULL",
+    "tables": ["olist_orders"],
     "unit": "Percentage (%)"
   },
   "avg_review_score": {
     "label": "Average Review Score",
     "category": "Customer Satisfaction",
     "description": "The mean rating given by customers in their reviews (1 to 5).",
-    "sql_formula": "AVG(review_score)",
-    "tables": ["order_reviews"],
+    "sql_formula": "SELECT AVG(r.review_score) FROM olist_order_reviews r",
+    "tables": ["olist_order_reviews"],
     "unit": "Score (1-5)"
   },
   "cancellation_rate": {
     "label": "Order Cancellation Rate",
     "category": "Operations",
     "description": "Percentage of total orders that were canceled.",
-    "sql_formula": "CAST(COUNT(CASE WHEN order_status = 'canceled' THEN 1 END) AS FLOAT) / COUNT(*) * 100",
-    "tables": ["orders"],
+    "sql_formula": "SELECT CAST(COUNT(CASE WHEN order_status = 'canceled' THEN 1 END) AS FLOAT) / NULLIF(COUNT(*), 0) * 100 FROM olist_orders",
+    "tables": ["olist_orders"],
     "unit": "Percentage (%)"
   },
   "freight_ratio": {
     "label": "Freight-to-Price Ratio",
     "category": "Logistics",
     "description": "The proportion of total cost attributed to shipping charges.",
-    "sql_formula": "SUM(freight_value) / SUM(price) * 100",
-    "tables": ["order_items"],
+    "sql_formula": "SELECT SUM(oi.freight_value) / SUM(oi.price) * 100 FROM olist_order_items oi",
+    "tables": ["olist_order_items"],
     "unit": "Ratio (%)"
   },
   "avg_payment_installments": {
     "label": "Average Payment Installments",
     "category": "Payments",
-    "description": "The average number of installments chosen by customers for payments.",
-    "sql_formula": "AVG(payment_installments)",
-    "tables": ["order_payments"],
+    "description": "The average number of installments chosen by customers.",
+    "sql_formula": "SELECT AVG(p.payment_installments) FROM olist_order_payments p",
+    "tables": ["olist_order_payments"],
     "unit": "Installments"
+  },
+  "total_customers": {
+    "label": "Total Customers",
+    "category": "Customers",
+    "description": "Count of unique customers in the system.",
+    "sql_formula": "SELECT COUNT(DISTINCT customer_unique_id) FROM olist_customers",
+    "tables": ["olist_customers"],
+    "unit": "Customers"
+  },
+  "total_products": {
+    "label": "Total Products",
+    "category": "Products",
+    "description": "Count of unique products in the system.",
+    "sql_formula": "SELECT COUNT(*) FROM olist_products",
+    "tables": ["olist_products"],
+    "unit": "Products"
+  },
+  "total_sellers": {
+    "label": "Total Sellers",
+    "category": "Sellers",
+    "description": "Count of unique sellers in the system.",
+    "sql_formula": "SELECT COUNT(*) FROM olist_sellers",
+    "tables": ["olist_sellers"],
+    "unit": "Sellers"
+  },
+  "total_revenue_retail": {
+    "label": "Total Revenue (Online Retail)",
+    "category": "Revenue",
+    "description": "Total revenue from Online Retail dataset.",
+    "sql_formula": "SELECT SUM(rii.totalprice) FROM retail_invoice_items rii JOIN retail_invoices ri ON rii.invoiceno = ri.invoiceno WHERE ri.is_cancellation = FALSE",
+    "tables": ["retail_invoice_items", "retail_invoices"],
+    "unit": "GBP (£)"
+  },
+  "retail_orders": {
+    "label": "Total Retail Invoices",
+    "category": "Orders",
+    "description": "Count of retail invoices (excluding cancellations).",
+    "sql_formula": "SELECT COUNT(*) FROM retail_invoices WHERE is_cancellation = FALSE",
+    "tables": ["retail_invoices"],
+    "unit": "Invoices"
+  },
+  "retail_customers": {
+    "label": "Total Retail Customers",
+    "category": "Customers",
+    "description": "Count of unique retail customers.",
+    "sql_formula": "SELECT COUNT(*) FROM retail_customers",
+    "tables": ["retail_customers"],
+    "unit": "Customers"
   },
   "top_categories_by_revenue": {
     "label": "Top Product Categories by Revenue",
     "category": "Products",
     "description": "Ranking of product categories based on total generated revenue.",
-    "sql_formula": "SELECT c.name as category, SUM(oi.price + oi.freight_value) as revenue FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN categories c ON p.category_id = c.id GROUP BY 1 ORDER BY 2 DESC",
-    "tables": ["order_items", "products", "categories"],
-    "unit": "BRL (R$)"
+    "sql_formula": "SELECT ct.category_name_en AS category, SUM(oi.price + oi.freight_value) AS revenue FROM olist_order_items oi JOIN olist_orders o ON oi.order_id = o.order_id JOIN olist_products p ON oi.product_id = p.product_id LEFT JOIN olist_product_category_translation ct ON p.category_name_pt = ct.category_name_pt WHERE o.order_status = 'delivered' GROUP BY 1 ORDER BY 2 DESC LIMIT 10",
+    "tables": ["olist_order_items", "olist_orders", "olist_products", "olist_product_category_translation"],
+    "unit": "BRL (R$)",
+    "returns": "rows"
   },
   "customer_geographic_concentration": {
-    "label": "Customer Geographic Concentration",
+    "label": "Revenue by State",
     "category": "Customers",
-    "description": "Distribution of customers across different Brazilian states.",
-    "sql_formula": "SELECT customer_state, COUNT(DISTINCT customer_unique_id) as customer_count FROM customers GROUP BY 1 ORDER BY 2 DESC",
-    "tables": ["customers"],
-    "unit": "Customer Count"
+    "description": "Revenue distribution across Brazilian states.",
+    "sql_formula": "SELECT c.state, SUM(oi.price + oi.freight_value) AS revenue FROM olist_order_items oi JOIN olist_orders o ON oi.order_id = o.order_id JOIN olist_customers c ON o.customer_id = c.customer_id WHERE o.order_status = 'delivered' GROUP BY 1 ORDER BY 2 DESC LIMIT 10",
+    "tables": ["olist_order_items", "olist_orders", "olist_customers"],
+    "unit": "BRL (R$)",
+    "returns": "rows"
+  },
+  "top_selling_products": {
+    "label": "Top Selling Products",
+    "category": "Products",
+    "description": "Most sold products by quantity.",
+    "sql_formula": "SELECT p.category_name_pt AS product, SUM(oi.price) AS revenue, SUM(oi.price + oi.freight_value) AS total, COUNT(*) AS order_count FROM olist_order_items oi JOIN olist_orders o ON oi.order_id = o.order_id JOIN olist_products p ON oi.product_id = p.product_id WHERE o.order_status = 'delivered' GROUP BY 1 ORDER BY 2 DESC LIMIT 10",
+    "tables": ["olist_order_items", "olist_orders", "olist_products"],
+    "unit": "BRL (R$)",
+    "returns": "rows"
+  },
+  "payment_type_distribution": {
+    "label": "Payment Type Distribution",
+    "category": "Payments",
+    "description": "Breakdown of orders by payment method.",
+    "sql_formula": "SELECT payment_type, COUNT(*) AS count, SUM(payment_value) AS total_value FROM olist_order_payments GROUP BY 1 ORDER BY 2 DESC",
+    "tables": ["olist_order_payments"],
+    "unit": "Orders",
+    "returns": "rows"
+  },
+  "monthly_revenue_trend": {
+    "label": "Monthly Revenue Trend",
+    "category": "Revenue",
+    "description": "Revenue aggregated by month.",
+    "sql_formula": "SELECT TO_CHAR(o.order_purchase_timestamp, 'YYYY-MM') AS month, SUM(oi.price + oi.freight_value) AS revenue, COUNT(DISTINCT oi.order_id) AS orders FROM olist_order_items oi JOIN olist_orders o ON oi.order_id = o.order_id WHERE o.order_status = 'delivered' AND o.order_purchase_timestamp IS NOT NULL GROUP BY 1 ORDER BY 1",
+    "tables": ["olist_order_items", "olist_orders"],
+    "unit": "BRL (R$)",
+    "returns": "rows"
+  },
+  "review_score_distribution": {
+    "label": "Review Score Distribution",
+    "category": "Customer Satisfaction",
+    "description": "Count of reviews by score (1-5).",
+    "sql_formula": "SELECT review_score AS score, COUNT(*) AS count FROM olist_order_reviews WHERE review_score IS NOT NULL GROUP BY 1 ORDER BY 1",
+    "tables": ["olist_order_reviews"],
+    "unit": "Reviews",
+    "returns": "rows"
+  },
+  "order_status_breakdown": {
+    "label": "Order Status Breakdown",
+    "category": "Orders",
+    "description": "Count of orders by status.",
+    "sql_formula": "SELECT order_status AS status, COUNT(*) AS count FROM olist_orders GROUP BY 1 ORDER BY 2 DESC",
+    "tables": ["olist_orders"],
+    "unit": "Orders",
+    "returns": "rows"
   }
 }

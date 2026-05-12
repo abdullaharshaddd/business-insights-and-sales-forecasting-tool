@@ -138,21 +138,6 @@ export class ProductService {
   }
 
   async findLowStock() {
-    const products = await prisma.product.findMany({
-      where: {
-        status: 'active',
-        inventory: {
-          quantity: { lte: prisma.product.fields.reorderPoint as any },
-        },
-      },
-      include: {
-        inventory: true,
-        category: { select: { id: true, name: true } },
-        supplier: { select: { id: true, name: true } },
-      },
-    });
-
-    // Fallback: raw query for the computed comparison
     const lowStockProducts = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT p.id FROM products p
       JOIN inventory i ON i.product_id = p.id

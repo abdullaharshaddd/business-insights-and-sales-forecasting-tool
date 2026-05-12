@@ -1,47 +1,78 @@
 /**
  * seed-from-olist.ts
  * ==================
- * Full migration script that reads the Olist SQLite database and seeds
- * the PostgreSQL database with ALL tables (Historical + Operational).
+ * Seeds the PostgreSQL database with historical data from CSV files.
+ *
+ * Sources:
+ *   - Olist data:    data/raw/olist/*.csv
+ *   - Online Retail: data/processed/online_retail_cleaned.csv
+ *
+ * Tables seeded:
+ *   1. Admin user
+ *   2. Olist category translations
+ *   3. Olist sellers
+ *   4. Olist customers
+ *   5. Olist products
+ *   6. Olist orders
+ *   7. Olist order items
+ *   8. Olist order payments
+ *   9. Olist order reviews
+ *  10. Olist geolocation
+ *  11. Online Retail customers
+ *  12. Online Retail products
+ *  13. Online Retail invoices
+ *  14. Online Retail invoice items
+ *
+ * NOTE: Operational tables (products, inventory, suppliers, purchase_orders)
+ * are for live inventory management — seed them via the UI, not here.
  */
 
 import path from 'path';
+import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const OLIST_DB_PATH = path.resolve(__dirname, '../../../data/processed/olist/olist.db');
-const SKU_PREFIX = 'BISFT';
+const DATA_DIR = path.resolve(__dirname, '../../../data');
+const OLIST_DIR = path.join(DATA_DIR, 'raw/olist');
+const RETAIL_CSV = path.join(DATA_DIR, 'processed/online_retail_cleaned.csv');
+const BATCH_SIZE = 500;
 
 function slugify(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
-function generateSKU(index: number): string {
-  return `${SKU_PREFIX}-${String(index).padStart(6, '0')}`;
+function csvRows(filepath: string): any[] {
+  const content = fs.readFileSync(filepath, 'utf-8');
+  const lines = content.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim());
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(v => v.trim());
+    const row: any = {};
+    headers.forEach((h, i) => { row[h] = values[i] ?? null; });
+    return row;
+  });
 }
 
-// Helper to batch inserts for performance
-async function batchInsert(tx: any, model: string, data: any[], batchSize = 500) {
-  for (let i = 0; i < data.length; i += batchSize) {
-    const batch = data.slice(i, i + batchSize);
-    await (tx as any)[model].createMany({ data: batch, skipDuplicates: true });
-    if (i % (batchSize * 10) === 0 && i > 0) console.log(`    ... inserted ${i} rows into ${model}`);
+async function batchUpsert(tx: any, modelName: string, data: any[], uniqueField: string) {
+  for (const item of data) {
+    await (tx as any)[modelName].upsert({
+      where: { [uniqueField]: item[uniqueField] },
+      update: {},
+      create: item,
+    }).catch(() => { /* skip duplicates silently */ });
   }
 }
 
 async function seed() {
   console.log('='.repeat(55));
-  console.log('  BISFT Unified Database — Full Migration');
+  console.log('  BISFT — Seed Historical Data');
   console.log('='.repeat(55));
-
-  const Database = require('better-sqlite3');
-  const sqlite = new Database(OLIST_DB_PATH, { readonly: true });
 
   try {
     // 1. Admin User
-    console.log('\n[1/10] Creating admin user...');
+    console.log('\n[1/14] Creating admin user...');
     const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'Admin@123', 12);
     await prisma.user.upsert({
       where: { email: process.env.ADMIN_EMAIL || 'admin@bisft.com' },
@@ -54,140 +85,212 @@ async function seed() {
       },
     });
 
-    // 2. Categories
-    console.log('\n[2/10] Migrating categories...');
-    const catRows = sqlite.prepare('SELECT * FROM product_category_name_translation').all();
+    // 2. Category Translations
+    console.log('\n[2/14] Seeding Olist category translations...');
+    const catRows = csvRows(path.join(OLIST_DIR, 'product_category_name_translation.csv'));
     for (const row of catRows) {
-      await prisma.category.upsert({
-        where: { slug: slugify(row.product_category_name_english) },
+      await prisma.olistCategoryTranslation.upsert({
+        where: { categoryNamePt: row.product_category_name },
         update: {},
         create: {
-          name: row.product_category_name_english.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-          namePt: row.product_category_name,
-          slug: slugify(row.product_category_name_english),
+          categoryNamePt: row.product_category_name,
+          categoryNameEn: row.product_category_name_english || row.product_category_name,
         },
       });
     }
 
-    // 3. Customers
-    console.log('\n[3/10] Migrating customers...');
-    const customers = sqlite.prepare('SELECT * FROM customers').all().map((r: any) => ({
-      id: r.customer_id,
-      uniqueId: r.customer_unique_id,
-      zipCodePrefix: r.customer_zip_code_prefix,
+    // 3. Olist Sellers
+    console.log('\n[3/14] Seeding Olist sellers...');
+    const sellers = csvRows(path.join(OLIST_DIR, 'olist_sellers_dataset.csv')).map((r: any) => ({
+      sellerId: r.seller_id,
+      zipCodePrefix: r.seller_zip_code_prefix ? String(r.seller_zip_code_prefix) : null,
+      city: r.seller_city,
+      state: r.seller_state,
+    }));
+    await batchUpsert(prisma, 'olistSeller', sellers, 'sellerId');
+    console.log(`    Seeded ${sellers.length} sellers`);
+
+    // 4. Olist Customers
+    console.log('\n[4/14] Seeding Olist customers...');
+    const customers = csvRows(path.join(OLIST_DIR, 'olist_customers_dataset.csv')).map((r: any) => ({
+      customerId: r.customer_id,
+      customerUniqueId: r.customer_unique_id,
+      zipCodePrefix: r.customer_zip_code_prefix ? String(r.customer_zip_code_prefix) : null,
       city: r.customer_city,
       state: r.customer_state,
     }));
-    await batchInsert(prisma, 'customer', customers);
+    await batchUpsert(prisma, 'olistCustomer', customers, 'customerId');
+    console.log(`    Seeded ${customers.length} Olist customers`);
 
-    // 4. Suppliers (Sellers)
-    console.log('\n[4/10] Migrating suppliers (sellers)...');
-    const sellers = sqlite.prepare('SELECT * FROM sellers').all().map((r: any) => ({
-      id: r.seller_id, // We use the Olist seller_id as the primary key
-      legacySellerId: r.seller_id,
-      name: `Seller ${r.seller_city} (${r.seller_state})`,
-      city: r.seller_city,
-      state: r.seller_state,
-      zipCode: String(r.seller_zip_code_prefix),
-    }));
-    await batchInsert(prisma, 'supplier', sellers);
-
-    // 5. Products
-    console.log('\n[5/10] Migrating products...');
-    const productRows = sqlite.prepare('SELECT * FROM products').all();
-    const catMap = new Map((await prisma.category.findMany()).map(c => [c.namePt, c.id]));
-    
-    // Get average prices from order_items
-    const avgPrices = new Map(sqlite.prepare('SELECT product_id, AVG(price) as p FROM order_items GROUP BY 1').all().map((r: any) => [r.product_id, r.p]));
-
-    const products = productRows.map((r: any, i: number) => ({
-      id: r.product_id,
-      legacyId: r.product_id,
-      sku: generateSKU(i + 1),
-      name: `${r.product_category_name || 'General'} Product`,
-      categoryId: catMap.get(r.product_category_name) || null,
-      basePrice: avgPrices.get(r.product_id) || 0,
-      weightG: r.product_weight_g,
-      lengthCm: r.product_length_cm,
-      heightCm: r.product_height_cm,
-      widthCm: r.product_width_cm,
-      photosQty: Math.round(r.product_photos_qty || 0),
-    }));
-    await batchInsert(prisma, 'product', products);
-
-    // 6. Inventory Initial Stock
-    console.log('\n[6/10] Initializing inventory...');
-    const inventory = products.map((p: any) => ({
-      productId: p.id,
-      quantity: Math.floor(Math.random() * 100) + 10, // Randomized for demo
-    }));
-    await batchInsert(prisma, 'inventory', inventory);
-
-    // 7. Orders
-    console.log('\n[7/10] Migrating orders...');
-    const orders = sqlite.prepare('SELECT * FROM orders').all().map((r: any) => ({
-      id: r.order_id,
-      customerId: r.customer_id,
-      status: r.order_status,
-      purchaseTimestamp: r.order_purchase_timestamp ? new Date(r.order_purchase_timestamp) : null,
-      approvedAt: r.order_approved_at ? new Date(r.order_approved_at) : null,
-      deliveredCarrierDate: r.order_delivered_carrier_date ? new Date(r.order_delivered_carrier_date) : null,
-      deliveredCustomerDate: r.order_delivered_customer_date ? new Date(r.order_delivered_customer_date) : null,
-      estimatedDeliveryDate: r.order_estimated_delivery_date ? new Date(r.order_estimated_delivery_date) : null,
-    }));
-    await batchInsert(prisma, 'order', orders);
-
-    // 8. Order Items
-    console.log('\n[8/10] Migrating order items...');
-    const orderItems = sqlite.prepare('SELECT * FROM order_items').all().map((r: any) => ({
-      orderId: r.order_id,
-      orderItemId: r.order_item_id,
+    // 5. Olist Products
+    console.log('\n[5/14] Seeding Olist products...');
+    const productRows = csvRows(path.join(OLIST_DIR, 'olist_products_dataset.csv')).map((r: any) => ({
       productId: r.product_id,
-      sellerId: r.seller_id,
+      categoryNamePt: r.product_category_name,
+      nameLength: r.product_name_lenght ? parseInt(r.product_name_lenght) : null,
+      descriptionLength: r.product_description_lenght ? parseInt(r.product_description_lenght) : null,
+      photosQty: Math.round(parseFloat(r.product_photos_qty) || 0),
+      weightG: r.product_weight_g ? Math.round(parseFloat(r.product_weight_g)) : null,
+      lengthCm: r.product_length_cm ? parseFloat(r.product_length_cm) : null,
+      heightCm: r.product_height_cm ? parseFloat(r.product_height_cm) : null,
+      widthCm: r.product_width_cm ? parseFloat(r.product_width_cm) : null,
+    }));
+    await batchUpsert(prisma, 'olistProduct', productRows, 'productId');
+    console.log(`    Seeded ${productRows.length} Olist products`);
+
+    // 6. Olist Orders
+    console.log('\n[6/14] Seeding Olist orders...');
+    const orders = csvRows(path.join(OLIST_DIR, 'olist_orders_dataset.csv')).map((r: any) => ({
+      orderId: r.order_id,
+      customerId: r.customer_id,
+      orderStatus: r.order_status,
+      orderPurchaseTimestamp: r.order_purchase_timestamp ? new Date(r.order_purchase_timestamp) : null,
+      orderApprovedAt: r.order_approved_at ? new Date(r.order_approved_at) : null,
+      orderDeliveredCarrierDate: r.order_delivered_carrier_date ? new Date(r.order_delivered_carrier_date) : null,
+      orderDeliveredCustomerDate: r.order_delivered_customer_date ? new Date(r.order_delivered_customer_date) : null,
+      orderEstimatedDeliveryDate: r.order_estimated_delivery_date ? new Date(r.order_estimated_delivery_date) : null,
+    }));
+    await batchUpsert(prisma, 'olistOrder', orders, 'orderId');
+    console.log(`    Seeded ${orders.length} Olist orders`);
+
+    // 7. Olist Order Items
+    console.log('\n[7/14] Seeding Olist order items...');
+    const orderItems = csvRows(path.join(OLIST_DIR, 'olist_order_items_dataset.csv')).map((r: any) => ({
+      orderId: r.order_id,
+      orderItemId: parseInt(r.order_item_id),
+      productId: r.product_id || null,
+      sellerId: r.seller_id || null,
       shippingLimitDate: r.shipping_limit_date ? new Date(r.shipping_limit_date) : null,
-      price: r.price,
-      freightValue: r.freight_value,
+      price: r.price ? parseFloat(r.price) : null,
+      freightValue: r.freight_value ? parseFloat(r.freight_value) : null,
     }));
-    await batchInsert(prisma, 'orderItem', orderItems);
+    await batchUpsert(prisma, 'olistOrderItem', orderItems, 'orderId_orderItemId');
+    console.log(`    Seeded ${orderItems.length} Olist order items`);
 
-    // 9. Order Payments & Reviews
-    console.log('\n[9/10] Migrating payments and reviews...');
-    const payments = sqlite.prepare('SELECT * FROM order_payments').all().map((r: any) => ({
+    // 8. Olist Order Payments
+    console.log('\n[8/14] Seeding Olist order payments...');
+    const payments = csvRows(path.join(OLIST_DIR, 'olist_order_payments_dataset.csv')).map((r: any) => ({
       orderId: r.order_id,
-      paymentSequential: r.payment_sequential,
+      paymentSequential: parseInt(r.payment_sequential),
       paymentType: r.payment_type,
-      paymentInstallments: r.payment_installments,
-      paymentValue: r.payment_value,
+      paymentInstallments: r.payment_installments ? parseInt(r.payment_installments) : null,
+      paymentValue: r.payment_value ? parseFloat(r.payment_value) : null,
     }));
-    await batchInsert(prisma, 'orderPayment', payments);
+    await batchUpsert(prisma, 'olistOrderPayment', payments, 'orderId_paymentSequential');
+    console.log(`    Seeded ${payments.length} Olist payments`);
 
-    const reviews = sqlite.prepare('SELECT * FROM order_reviews').all().map((r: any) => ({
-      id: r.review_id,
+    // 9. Olist Order Reviews
+    console.log('\n[9/14] Seeding Olist order reviews...');
+    const reviews = csvRows(path.join(OLIST_DIR, 'olist_order_reviews_dataset.csv')).map((r: any) => ({
+      reviewId: r.review_id,
       orderId: r.order_id,
-      reviewScore: r.review_score,
-      reviewCommentTitle: r.review_comment_title,
-      reviewCommentMessage: r.review_comment_message,
+      reviewScore: r.review_score ? parseInt(r.review_score) : null,
+      reviewCommentTitle: r.review_comment_title || null,
+      reviewCommentMessage: r.review_comment_message || null,
       reviewCreationDate: r.review_creation_date ? new Date(r.review_creation_date) : null,
       reviewAnswerTimestamp: r.review_answer_timestamp ? new Date(r.review_answer_timestamp) : null,
     }));
-    await batchInsert(prisma, 'orderReview', reviews);
+    await batchUpsert(prisma, 'olistOrderReview', reviews, 'reviewId');
+    console.log(`    Seeded ${reviews.length} Olist reviews`);
 
-    // 10. Geolocation
-    console.log('\n[10/10] Migrating geolocation (this may take a while)...');
-    const geo = sqlite.prepare('SELECT * FROM geolocation').all().map((r: any) => ({
-      zipCodePrefix: r.geolocation_zip_code_prefix,
-      lat: r.geolocation_lat,
-      lng: r.geolocation_lng,
+    // 10. Olist Geolocation
+    console.log('\n[10/14] Seeding Olist geolocation...');
+    const geo = csvRows(path.join(OLIST_DIR, 'olist_geolocation_dataset.csv')).map((r: any) => ({
+      zipCodePrefix: String(r.geolocation_zip_code_prefix),
+      lat: r.geolocation_lat ? parseFloat(r.geolocation_lat) : null,
+      lng: r.geolocation_lng ? parseFloat(r.geolocation_lng) : null,
       city: r.geolocation_city,
       state: r.geolocation_state,
     }));
-    await batchInsert(prisma, 'geolocation', geo, 1000);
+    await batchUpsert(prisma, 'olistGeolocation', geo, 'id');
+    console.log(`    Seeded ${geo.length} Olist geolocation records`);
 
-    console.log('\n✅ UNIFIED DATABASE MIGRATION COMPLETE!');
+    // 11. Online Retail Customers
+    console.log('\n[11/14] Seeding Online Retail customers...');
+    const retailRows = csvRows(RETAIL_CSV);
+    const retailCustomersMap = new Map<string, string>(); // customerid -> country
+    for (const r of retailRows) {
+      if (r.customerid) retailCustomersMap.set(r.customerid, r.country);
+    }
+    const retailCustomers = Array.from(retailCustomersMap.entries()).map(([customerid, country]) => ({
+      customerid,
+      country: country || 'Unknown',
+    }));
+    await batchUpsert(prisma, 'retailCustomer', retailCustomers, 'customerid');
+    console.log(`    Seeded ${retailCustomers.length} Online Retail customers`);
+
+    // 12. Online Retail Products
+    console.log('\n[12/14] Seeding Online Retail products...');
+    const retailProductsMap = new Map<string, { description: string; latestUnitPrice: number }>();
+    for (const r of retailRows) {
+      if (r.stockcode) {
+        retailProductsMap.set(r.stockcode, {
+          description: r.description || '',
+          latestUnitPrice: r.unitprice ? parseFloat(r.unitprice) : 0,
+        });
+      }
+    }
+    const retailProducts = Array.from(retailProductsMap.entries()).map(([stockcode, data]) => ({
+      stockcode,
+      description: data.description,
+      latestUnitPrice: data.latestUnitPrice,
+    }));
+    await batchUpsert(prisma, 'retailProduct', retailProducts, 'stockcode');
+    console.log(`    Seeded ${retailProducts.length} Online Retail products`);
+
+    // 13. Online Retail Invoices
+    console.log('\n[13/14] Seeding Online Retail invoices...');
+    const invoicesMap = new Map<string, { customerid: string; invoicedate: Date; isCancellation: boolean }>();
+    for (const r of retailRows) {
+      if (r.invoiceno) {
+        invoicesMap.set(r.invoiceno, {
+          customerid: r.customerid || '',
+          invoicedate: r.invoicedate ? new Date(r.invoicedate) : new Date(),
+          isCancellation: r.invoiceno.toString().startsWith('C'),
+        });
+      }
+    }
+    const invoices = Array.from(invoicesMap.entries()).map(([invoiceno, data]) => ({
+      invoiceno,
+      customerid: data.customerid,
+      invoicedate: data.invoicedate,
+      isCancellation: data.isCancellation,
+    }));
+    await batchUpsert(prisma, 'retailInvoice', invoices, 'invoiceno');
+    console.log(`    Seeded ${invoices.length} Online Retail invoices`);
+
+    // 14. Online Retail Invoice Items
+    console.log('\n[14/14] Seeding Online Retail invoice items...');
+    const invoiceItems = retailRows
+      .filter((r: any) => r.invoiceno && r.stockcode && !r.invoiceno.toString().startsWith('C'))
+      .map((r: any) => ({
+        invoiceno: r.invoiceno,
+        stockcode: r.stockcode,
+        quantity: parseInt(r.quantity) || 0,
+        unitprice: parseFloat(r.unitprice) || 0,
+        totalprice: parseFloat(r.totalprice) || 0,
+      }));
+    // Remove duplicates (same invoice+stockcode combination might appear from cleaning)
+    const seen = new Set<string>();
+    const uniqueInvoiceItems = invoiceItems.filter((item: any) => {
+      const key = `${item.invoiceno}-${item.stockcode}-${item.quantity}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    // Use raw insert for speed (no unique key on this table)
+    if (uniqueInvoiceItems.length > 0) {
+      await prisma.retailInvoiceItem.createMany({ data: uniqueInvoiceItems, skipDuplicates: true });
+    }
+    console.log(`    Seeded ${uniqueInvoiceItems.length} Online Retail invoice items`);
+
+    console.log('\n✅ BISFT historical data seeded successfully!');
+    console.log('   Operational tables (products, inventory, suppliers, POs)');
+    console.log('   are empty — use the UI to manage live operational data.\n');
+
   } catch (err) {
-    console.error('❌ Migration failed:', err);
+    console.error('\n❌ Seeding failed:', err);
   } finally {
-    sqlite.close();
     await prisma.$disconnect();
   }
 }

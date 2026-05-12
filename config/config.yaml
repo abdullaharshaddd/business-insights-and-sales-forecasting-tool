@@ -21,7 +21,7 @@ paths:
 # ── Database Configuration ───────────────────────────────────────────────────
 database:
   type: postgresql
-  url: "postgresql://postgres:abdullahknows01%23@localhost:5432/bisft_inventory"
+  url: "postgresql://postgres:sohaibknows01%23@localhost:5432/BISFT"
 
 # ── Churn Feature Engineering ─────────────────────────────────────────────────
 features:

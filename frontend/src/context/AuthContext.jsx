@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
     if (token) {
       inventoryApi.get('/auth/me')
         .then(res => {
+          // sendSuccess wraps data as { success: true, data: <user> }
           setUser(res.data)
         })
         .catch(() => {
@@ -24,9 +25,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async (email, password) => {
+    // sendSuccess wraps result as { success: true, data: { accessToken, refreshToken, user } }
     const res = await inventoryApi.post('/auth/login', { email, password })
     const { accessToken, user: userData } = res.data
-    
     localStorage.setItem('token', accessToken)
     setUser(userData)
     return userData

@@ -24,6 +24,7 @@ export default function Analytics() {
   useEffect(() => {
     api.get('/analytics/tools')
       .then(data => {
+        // FastAPI returns { status, tools, count } (interceptor returns response.data)
         setTools(data.tools || [])
         if (data.tools?.length) setSelected(data.tools[0].id)
       })

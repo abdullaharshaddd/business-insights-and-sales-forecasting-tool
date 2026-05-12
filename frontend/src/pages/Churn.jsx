@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar, Legend
+  ResponsiveContainer, Cell, Legend
 } from 'recharts'
 import api from '../api/client'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -50,8 +50,9 @@ export default function Churn() {
     setLoading(true)
     Promise.all([api.get('/churn/segments'), api.get('/churn/models')])
       .then(([segRes, modRes]) => {
-        setSegments(segRes.segments)
-        setModels(modRes.models)
+        // Backend returns { status, source, segments } or { status, source, models }
+        setSegments(segRes.segments || [])
+        setModels(modRes.models || [])
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
@@ -156,10 +157,9 @@ export default function Churn() {
                   <Bar dataKey="churn_rate" name="Churn Rate" radius={[4,4,0,0]}>
                     {segBarData.map((entry, index) => {
                       const cfg = SEGMENT_COLOR[entry.segment] || {}
-                      return <rect key={index} fill={cfg.color || '#6366F1'} />
+                      return <Cell key={index} fill={cfg.color || '#6366F1'} />
                     })}
                   </Bar>
-                  {segBarData.map((entry, index) => null)}
                 </BarChart>
               </ResponsiveContainer>
             </div>
